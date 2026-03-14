@@ -1,0 +1,251 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  ADMIN
+  USER
+}
+
+enum AdvanceMode {
+  ONLINE
+  CASH
+}
+
+enum BalanceMode {
+  ONLINE
+  CASH
+}
+
+enum PackingType {
+  WITH_PACKING
+  WITHOUT_PACKING
+}
+
+enum InvoiceStatus {
+  ACTIVE
+  CLOSED
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  NEGOTIATING
+  CONVERTED
+  LOST
+}
+
+enum WIPPhase {
+  RAW_MATERIALS
+  DESIGN
+  PRINTING
+  POST_PRINTING
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String // hashed
+  role      Role     @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  createdInvoices  Invoice[] @relation("CreatedBy")
+  assignedInvoices Invoice[] @relation("AssignedTo")
+  createdLeads     Lead[]    @relation("LeadCreatedBy")
+  assignedLeads    Lead[]    @relation("LeadAssignedTo")
+}
+
+model Invoice {
+  id            String   @id @default(uuid())
+  invoiceNumber Int      @unique @default(autoincrement())
+  customerName  String
+  phone         String
+  brideName     String
+  groomName     String
+  modelNumber   String
+  description   String
+  date          DateTime @default(now())
+
+  quantity          Int
+  toleranceQuantity Int // floor(quantity * 0.95)
+  unitRate          Decimal
+  totalAmount       Decimal // quantity * unitRate
+
+  advancePaid   Boolean      @default(false)
+  advanceAmount Decimal?
+  advanceMode   AdvanceMode?
+
+  balance     Decimal?
+  balancePaid Boolean      @default(false)
+  balanceMode BalanceMode?
+
+  estimatedDesignTime String
+  estimatedPrintTime  String
+  packing             PackingType
+
+  printingColor   String?
+  designer        String?
+  printer         String?
+  additionalNotes String?
+
+  contentConfirmedOn DateTime?
+  finalDeliveryDate  DateTime?
+
+  assigneeId String
+  assignee   User   @relation("AssignedTo", fields: [assigneeId], references: [id])
+
+  status InvoiceStatus @default(ACTIVE)
+
+  deletedAt DateTime? // soft delete
+
+  createdById String
+  createdBy   User   @relation("CreatedBy", fields: [createdById], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  wipCard    WIPCard?
+  finalCheck FinalCheck?
+
+  @@index([finalDeliveryDate])
+  @@index([assigneeId])
+  @@index([status])
+  @@index([deletedAt])
+}
+
+model Lead {
+  id           String @id @default(uuid())
+  customerName String
+  phone        String
+  category     String
+  description  String
+  quantity     Int
+
+  assignedToId String
+  assignedTo   User   @relation("LeadAssignedTo", fields: [assignedToId], references: [id])
+
+  estimatedBillValue Decimal
+  status             LeadStatus @default(NEW)
+  notes              String?
+
+  deletedAt DateTime? // soft delete
+
+  createdById String
+  createdBy   User   @relation("LeadCreatedBy", fields: [createdById], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([assignedToId])
+  @@index([status])
+  @@index([deletedAt])
+}
+
+model WIPCard {
+  id        String  @id @default(uuid())
+  invoiceId String  @unique
+  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  // Denormalized
+  invoiceNumber String
+  description   String
+  quantity      Int
+  customerName  String
+
+  phase WIPPhase @default(RAW_MATERIALS)
+  order Int      @default(0)
+
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([phase])
+  @@index([deletedAt])
+  @@index([order])
+}
+
+model FinalCheck {
+  id        String  @id @default(uuid())
+  invoiceId String  @unique
+  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  // Denormalized
+  invoiceNumber String
+  description   String
+  designer      String?
+  printer       String?
+  quantity      Int
+  modelNumber   String
+
+  // Checklist boolean fields
+  billNumberVerified                Boolean @default(false)
+  modelNumberVerified               Boolean @default(false)
+  descriptionVerified               Boolean @default(false)
+  quantityVerified                  Boolean @default(false)
+  printerVerified                   Boolean @default(false)
+  dtpVerified                       Boolean @default(false)
+  colourExplainedToCustomer         Boolean @default(false)
+  leadTimeExplainedToCustomer       Boolean @default(false)
+  wastageRemarksAdjusted            Boolean @default(false)
+  dtpAssignedAndStarted             Boolean @default(false)
+  materialCardsReceived             Boolean @default(false)
+  dtpConfirmed                      Boolean @default(false)
+  cardsStockUpdated                 Boolean @default(false)
+  currentStockChecked               Boolean @default(false)
+  stickersQualityCheckedPacked      Boolean @default(false)
+  stickerQualityUpdated             Boolean @default(false)
+  logoCheckedOnDtp                  Boolean @default(false)
+  printerScheduleInformed           Boolean @default(false)
+  dtpSentToCustomer                 Boolean @default(false)
+  namePlatesReceived1               Boolean @default(false)
+  namePlatesQualityChecked          Boolean @default(false)
+  dtpConfirmedByCustomer            Boolean @default(false)
+  namePlatesReceivedFinal           Boolean @default(false)
+  signaturesFromCustomer            Boolean @default(false)
+  leadTimeUpdatedToCustomer         Boolean @default(false)
+  leftRightExplained                Boolean @default(false)
+  masterTracingsReady               Boolean @default(false)
+  samplesCollectedFromDtp           Boolean @default(false)
+  masterCheckWithPdfCard            Boolean @default(false)
+  timeColourLanguageWrittenOnCards  Boolean @default(false)
+  timeColourLanguageSentInGroup     Boolean @default(false)
+  cardOrientationSentToGroup        Boolean @default(false)
+  materialSentToPrinter             Boolean @default(false)
+  estimatedPrintingDateSet          Boolean @default(false)
+  printerFollowUp                   Boolean @default(false)
+  cardOrientationSentToPrinterGroup Boolean @default(false)
+  paddingBoxingScheduleInformed     Boolean @default(false)
+  printedMaterialReceived           Boolean @default(false)
+  printedMaterialQualityChecked     Boolean @default(false)
+  cardsNamePlatesStickersToBinder   Boolean @default(false)
+  binderFollowUp                    Boolean @default(false)
+  estimatedTimeToBinder             Boolean @default(false)
+  endProductMaterialCheck           Boolean @default(false)
+  sampleExchangedWithOriginal       Boolean @default(false)
+  customerInformedToBringBag        Boolean @default(false)
+  customerInformedAboutReadiness    Boolean @default(false)
+  paymentCollected                  Boolean @default(false)
+  reminderFollowUp                  Boolean @default(false)
+  ratingTaken                       Boolean @default(false)
+  checkRatingName                   Boolean @default(false)
+  balanceCollected                  Boolean @default(false)
+
+  isComplete  Boolean   @default(false)
+  completedAt DateTime?
+
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([deletedAt])
+  @@index([isComplete])
+}
