@@ -49,7 +49,7 @@ export async function GET(req: Request) {
       }),
       (prisma.purchase as any).findMany({
         where: { deletedAt: null, completedAt: { gte: rangeStart, lte: now } },
-        select: { profit: true, completedAt: true },
+        select: { billValue: true, totalProductionCost: true, completedAt: true },
       }),
       (prisma.monthlyExpense as any).findMany({
         where: { deletedAt: null, OR: expenseOrList },
@@ -72,7 +72,10 @@ export async function GET(req: Request) {
       });
       const mExps = allExpenses.filter((e: any) => e.month === (d.getMonth() + 1) && e.year === d.getFullYear());
 
-      const mGrossProfit = mPurchases.reduce((s: number, p: any) => s + Number(p.profit || 0), 0);
+      // Use same formula as accounts/summary: grossProfit = billValue - totalProductionCost
+      const mGrossRevenue = mPurchases.reduce((s: number, p: any) => s + Number(p.billValue || 0), 0);
+      const mProductionCost = mPurchases.reduce((s: number, p: any) => s + Number(p.totalProductionCost || 0), 0);
+      const mGrossProfit = mGrossRevenue - mProductionCost;
       const mExpTotal = mExps.reduce((s: number, e: any) => s + Number(e.amount || 0), 0);
       
       const netProfit = mGrossProfit - mExpTotal;
