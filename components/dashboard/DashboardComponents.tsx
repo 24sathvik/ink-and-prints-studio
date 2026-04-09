@@ -230,12 +230,13 @@ export const WIPSummaryBar = memo(function WIPSummaryBar({ phases, total }: { ph
 const getInvoiceStatusNode = (inv: any) => {
   if (inv.status === "CLOSED") return <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide bg-green-100 text-green-700">Closed</span>;
   
-  if (!inv.wipCard) {
+  const activeWip = inv.wipCards?.[0];
+  if (!activeWip) {
     return <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide bg-slate-100 text-slate-500">Not Started</span>;
   }
   
   // If WIP exists
-  const phaseLabel = PHASE_LABELS[inv.wipCard.phase] || inv.wipCard.phase;
+  const phaseLabel = PHASE_LABELS[activeWip.phase] || activeWip.phase;
   const phaseColorClasses: Record<string, string> = {
     RAW_MATERIALS: "bg-blue-100 text-blue-700 border border-blue-200",
     DESIGN: "bg-purple-100 text-purple-700 border border-purple-200",
@@ -244,7 +245,7 @@ const getInvoiceStatusNode = (inv: any) => {
     PAYMENT_PENDING: "bg-orange-100 text-orange-700 border border-orange-200",
   };
   
-  const phaseKey = inv.wipCard.phase;
+  const phaseKey = activeWip.phase;
   const classStr = phaseColorClasses[phaseKey] || "bg-slate-100 text-slate-700 border border-slate-200";
 
   return <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide ${classStr}`}>{phaseLabel}</span>;

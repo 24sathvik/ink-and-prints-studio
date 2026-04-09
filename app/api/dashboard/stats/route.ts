@@ -111,7 +111,7 @@ export async function GET(req: Request) {
           finalDeliveryDate: true,
           status: true,
           balancePaid: true,
-          wipCard: { select: { phase: true } },
+          wipCards: { select: { phase: true }, take: 1 },
           assignee: { select: { name: true } },
         },
       }),
