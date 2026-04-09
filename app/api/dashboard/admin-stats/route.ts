@@ -20,30 +20,6 @@ export async function GET(req: Request) {
     const catStartStr = searchParams.get("catStart");
     const catEndStr = searchParams.get("catEnd");
     
-    // Fetch net profit truth from accounts/summary
-    const accountsUrl = new URL(req.url);
-    accountsUrl.pathname = "/api/accounts/summary";
-    accountsUrl.search = "";
-    
-    let accountsTrend: Record<string, number> = {};
-    try {
-      // Must forward cookies/auth headers
-      const accRes = await fetch(accountsUrl.toString(), { 
-        headers: req.headers,
-        cache: 'no-store' 
-      });
-      if (accRes.ok) {
-        const accJson = await accRes.json();
-        if (accJson.success && accJson.data?.monthlySales) {
-          accJson.data.monthlySales.forEach((s: any) => {
-            accountsTrend[s.month] = s.profit;
-          });
-        }
-      }
-    } catch (e) {
-      console.error("Failed to fetch accounts API for net profit", e);
-    }
-
     const now = new Date();
 
     // Compute single date range covering all N months
@@ -53,8 +29,15 @@ export async function GET(req: Request) {
     const catStart = catStartStr ? new Date(catStartStr) : rangeStart;
     const catEnd = catEndStr ? (() => { const d = new Date(catEndStr); d.setHours(23, 59, 59, 999); return d; })() : now;
 
-    // Fetch ALL invoices in range + category dist in one parallel shot — 2 queries instead of N+1
-    const [allInvoices, categoriesAggr] = await Promise.all([
+    // Build the OR array for monthly expenses
+    const expenseOrList = [];
+    for (let i = 0; i < numMonths; i++) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        expenseOrList.push({ month: d.getMonth() + 1, year: d.getFullYear() });
+    }
+
+    // Fetch ALL invoices, categories, purchases, and expenses in one parallel shot
+    const [allInvoices, categoriesAggr, allPurchases, allExpenses] = await Promise.all([
       (prisma.invoice as any).findMany({
         where: { createdAt: { gte: rangeStart, lte: now }, deletedAt: null },
         select: { totalAmount: true, createdAt: true },
@@ -63,6 +46,14 @@ export async function GET(req: Request) {
         by: ['category'],
         where: { createdAt: { gte: catStart, lte: catEnd }, deletedAt: null },
         _sum: { totalAmount: true },
+      }),
+      (prisma.purchase as any).findMany({
+        where: { deletedAt: null, completedAt: { gte: rangeStart, lte: now } },
+        select: { profit: true, completedAt: true },
+      }),
+      (prisma.monthlyExpense as any).findMany({
+        where: { deletedAt: null, OR: expenseOrList },
+        select: { amount: true, month: true, year: true },
       })
     ]);
 
@@ -74,7 +65,17 @@ export async function GET(req: Request) {
       const mEnd = new Date(d.getFullYear(), d.getMonth() + 1, 1).getTime();
 
       const monthKey = d.toLocaleString("en-IN", { month: "short", year: "numeric" });
-      const netProfit = accountsTrend[monthKey] ?? 0;
+      
+      const mPurchases = allPurchases.filter((p: any) => {
+        const t = new Date(p.completedAt).getTime();
+        return t >= mStart && t < mEnd;
+      });
+      const mExps = allExpenses.filter((e: any) => e.month === (d.getMonth() + 1) && e.year === d.getFullYear());
+
+      const mGrossProfit = mPurchases.reduce((s: number, p: any) => s + Number(p.profit || 0), 0);
+      const mExpTotal = mExps.reduce((s: number, e: any) => s + Number(e.amount || 0), 0);
+      
+      const netProfit = mGrossProfit - mExpTotal;
 
       const monthInvoices = allInvoices.filter((inv: any) => {
         const t = new Date(inv.createdAt).getTime();
