@@ -7,9 +7,9 @@ export async function GET() {
   try {
     await requireAuth();
 
-    // Get the latest invoice created
+    // Get the highest invoice number
     const latestInvoice = await prisma.invoice.findFirst({
-      orderBy: { createdAt: "desc" },
+      orderBy: { invoiceNumber: "desc" },
       select: { invoiceNumber: true },
     });
 

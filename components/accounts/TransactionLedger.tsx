@@ -55,9 +55,9 @@ export function TransactionLedger() {
     staleTime: 15000,
   });
 
-  const transactions: any[] = data?.transactions || [];
-  const totals = data?.totals || {};
-  const pagination = data?.pagination || {};
+  const transactions: any[] = data?.data?.transactions || [];
+  const totals = data?.data?.totals || {};
+  const pagination = data?.data?.pagination || {};
 
   return (
     <div className="bg-white rounded-xl border border-brand-border shadow-sm overflow-hidden">
