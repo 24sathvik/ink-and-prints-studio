@@ -147,11 +147,7 @@ export const UrgentDeliveriesPanel = memo(function UrgentDeliveriesPanel({ deliv
                 deliveries.map(inv => (
                   <div 
                     key={inv.id} 
-                    onClick={() => {
-                      setIsModalOpen(false);
-                      router.push(`/dashboard/invoices/${inv.id}`);
-                    }}
-                    className={`bg-white border rounded-lg p-4 cursor-pointer hover:shadow-md hover:border-slate-300 transition-all ${getUrgentBorderClass(inv.finalDeliveryDate)} shrink-0 flex items-center justify-between gap-4`}
+                    className={`bg-white border rounded-lg p-4 transition-all ${getUrgentBorderClass(inv.finalDeliveryDate)} shrink-0 flex items-center justify-between gap-4`}
                   >
                     <div>
                       <div className="flex items-center gap-2 mb-1">
