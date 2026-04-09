@@ -101,6 +101,7 @@ model User {
   assignedInvoices Invoice[] @relation("AssignedTo")
   createdLeads     Lead[]    @relation("LeadCreatedBy")
   assignedLeads    Lead[]    @relation("LeadAssignedTo")
+  counterTransactions CounterTransaction[]
 }
 
 model Invoice {
