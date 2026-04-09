@@ -46,7 +46,7 @@ export function Sidebar() {
       className={`hidden md:flex flex-col bg-brand-forest text-white transition-all duration-300 relative shrink-0 ${
         collapsed ? "w-16" : "w-60"
       }`}
-      style={{ minHeight: "100vh" }}
+      style={{ height: "100vh", overflowY: "auto" }}
     >
       {/* Logo */}
       <div className={`flex items-center gap-3 px-4 py-5 border-b border-white/10 ${collapsed ? "justify-center" : "justify-center"}`}>
