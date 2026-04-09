@@ -20,57 +20,74 @@ export async function GET(req: Request) {
     const catStartStr = searchParams.get("catStart");
     const catEndStr = searchParams.get("catEnd");
     
-    const now = new Date();
-    const monthlyData = [];
+    // Fetch net profit truth from accounts/summary
+    const accountsUrl = new URL(req.url);
+    accountsUrl.pathname = "/api/accounts/summary";
+    accountsUrl.search = "";
+    
+    let accountsTrend: Record<string, number> = {};
+    try {
+      // Must forward cookies/auth headers
+      const accRes = await fetch(accountsUrl.toString(), { 
+        headers: req.headers,
+        cache: 'no-store' 
+      });
+      if (accRes.ok) {
+        const accJson = await accRes.json();
+        if (accJson.success && accJson.data?.monthlySales) {
+          accJson.data.monthlySales.forEach((s: any) => {
+            accountsTrend[s.month] = s.profit;
+          });
+        }
+      }
+    } catch (e) {
+      console.error("Failed to fetch accounts API for net profit", e);
+    }
 
-    // Monthly breakdown over the last N months — all queries run in parallel per month
+    const now = new Date();
+
+    // Compute single date range covering all N months
+    const rangeStart = new Date(now.getFullYear(), now.getMonth() - numMonths + 1, 1);
+
+    // Category Distribution date range
+    const catStart = catStartStr ? new Date(catStartStr) : rangeStart;
+    const catEnd = catEndStr ? (() => { const d = new Date(catEndStr); d.setHours(23, 59, 59, 999); return d; })() : now;
+
+    // Fetch ALL invoices in range + category dist in one parallel shot — 2 queries instead of N+1
+    const [allInvoices, categoriesAggr] = await Promise.all([
+      (prisma.invoice as any).findMany({
+        where: { createdAt: { gte: rangeStart, lte: now }, deletedAt: null },
+        select: { totalAmount: true, createdAt: true },
+      }),
+      (prisma.invoice as any).groupBy({
+        by: ['category'],
+        where: { createdAt: { gte: catStart, lte: catEnd }, deletedAt: null },
+        _sum: { totalAmount: true },
+      })
+    ]);
+
+    // Bucket invoice data by month in JS
+    const monthlyData = [];
     for (let i = numMonths - 1; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const mStart = new Date(d.getFullYear(), d.getMonth(), 1);
-      const mEnd = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999);
-      const mMonth = d.getMonth() + 1;
-      const mYear = d.getFullYear();
+      const mStart = new Date(d.getFullYear(), d.getMonth(), 1).getTime();
+      const mEnd = new Date(d.getFullYear(), d.getMonth() + 1, 1).getTime();
 
-      const [invoiceStats, purchases, expenses] = await Promise.all([
-        (prisma.invoice as any).aggregate({
-          where: { createdAt: { gte: mStart, lte: mEnd }, deletedAt: null },
-          _count: { id: true },
-          _sum: { totalAmount: true },
-          _avg: { totalAmount: true },
-        }),
-        (prisma as any).purchase.findMany({
-          where: { deletedAt: null, completedAt: { gte: mStart, lte: mEnd } },
-          select: { profit: true, totalProductionCost: true },
-        }),
-        (prisma as any).monthlyExpense.findMany({
-          where: { month: mMonth, year: mYear, deletedAt: null },
-          select: { amount: true },
-        }),
-      ]);
+      const monthKey = d.toLocaleString("en-IN", { month: "short", year: "numeric" });
+      const netProfit = accountsTrend[monthKey] ?? 0;
 
-      const grossProfit = purchases.reduce((s: number, p: any) => s + Number(p.profit || 0), 0);
-      const totalExpenses = expenses.reduce((s: number, e: any) => s + Number(e.amount || 0), 0);
-      const netProfit = grossProfit - totalExpenses;
+      const monthInvoices = allInvoices.filter((inv: any) => {
+        const t = new Date(inv.createdAt).getTime();
+        return t >= mStart && t < mEnd;
+      });
 
       monthlyData.push({
-        month: d.toLocaleString("default", { month: "short", year: "numeric" }),
-        totalInvoices: invoiceStats._count.id || 0,
-        revenue: Number(invoiceStats._sum.totalAmount || 0),
-        avgInvoiceValue: Number(invoiceStats._avg.totalAmount || 0),
+        month: monthKey,
+        totalInvoices: monthInvoices.length,
+        revenue: monthInvoices.reduce((s: number, inv: any) => s + Number(inv.totalAmount || 0), 0),
         netProfit,
       });
     }
-
-    // Category Distribution — use custom date range if supplied, else last numMonths
-    const catStart = catStartStr ? new Date(catStartStr) : new Date(now.getFullYear(), now.getMonth() - numMonths + 1, 1);
-    const catEnd = catEndStr ? (() => { const d = new Date(catEndStr); d.setHours(23, 59, 59, 999); return d; })() : now;
-
-    // Using Prisma groupBy for category pie chart
-    const categoriesAggr = await (prisma.invoice as any).groupBy({
-      by: ['category'],
-      where: { createdAt: { gte: catStart, lte: catEnd }, deletedAt: null },
-      _sum: { totalAmount: true },
-    });
 
     const categoryDistribution = categoriesAggr
       .map((c: any) => ({

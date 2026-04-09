@@ -11,15 +11,19 @@ function fmt(n: number) {
   return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 }).format(n);
 }
 
-function MarkPaidModal({ invoice, onClose, onSaved }: { invoice: any; onClose: () => void; onSaved: () => void }) {
+function MarkPaidModal({ invoice, isPartial, onClose, onSaved }: { invoice: any; isPartial: boolean; onClose: () => void; onSaved: () => void }) {
   const [form, setForm] = useState({
-    amount: String(invoice.balance || 0),
+    amount: isPartial ? "" : String(invoice.balance || 0),
     mode: "CASH",
     date: new Date().toISOString().slice(0, 10),
   });
 
   const mutation = useMutation({
     mutationFn: async (data: any) => {
+      const parsedAmount = Number(data.amount);
+      if (parsedAmount > Number(invoice.balance)) {
+        throw new Error("Amount cannot exceed remaining balance");
+      }
       const res = await fetch("/api/accounts/transactions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -38,10 +42,10 @@ function MarkPaidModal({ invoice, onClose, onSaved }: { invoice: any; onClose: (
       return res.json();
     },
     onSuccess: () => {
-      toast.success(`Balance for ${invoice.invoiceNumber} marked as paid.`);
+      toast.success(`Payment for ${invoice.invoiceNumber} recorded.`);
       onSaved();
     },
-    onError: () => toast.error("Failed to mark as paid."),
+    onError: (e: any) => toast.error(e.message || "Failed to record payment."),
   });
 
   return (
@@ -57,8 +61,8 @@ function MarkPaidModal({ invoice, onClose, onSaved }: { invoice: any; onClose: (
             <p className="text-green-600 text-xs mt-1">Balance Due: <strong>{fmt(Number(invoice.balance))}</strong></p>
           </div>
           <div>
-            <label className="text-xs font-bold text-slate-500 mb-1 block">Amount Received (₹)</label>
-            <input type="number" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))}
+            <label className="text-xs font-bold text-slate-500 mb-1 block">Amount Received (₹) {isPartial && "(Up to limit)"}</label>
+            <input type="number" min={1} max={Number(invoice.balance)} value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))}
               className="w-full h-10 px-3 text-sm border border-slate-200 rounded-lg outline-none font-bold" />
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -88,7 +92,7 @@ function MarkPaidModal({ invoice, onClose, onSaved }: { invoice: any; onClose: (
 
 export function ReceivablesTable({ data }: { data: any }) {
   const queryClient = useQueryClient();
-  const [markPaidTarget, setMarkPaidTarget] = useState<any | null>(null);
+  const [modalState, setModalState] = useState<{ invoice: any, isPartial: boolean } | null>(null);
 
   const invoices: any[] = data?.invoices || [];
   const totalReceivable = data?.totalReceivable || 0;
@@ -153,10 +157,16 @@ export function ReceivablesTable({ data }: { data: any }) {
                     </td>
                     <td className="px-4 py-2.5 text-xs text-brand-muted">{inv.assignee?.name || "—"}</td>
                     <td className="px-4 py-2.5">
-                      <button onClick={() => setMarkPaidTarget(inv)}
-                        className="px-3 py-1.5 bg-green-600 text-white text-xs font-bold rounded-lg hover:bg-green-700 transition-colors">
-                        Mark Paid
-                      </button>
+                      <div className="flex gap-2">
+                        <button onClick={() => setModalState({ invoice: inv, isPartial: true })}
+                          className="px-2 py-1.5 bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 text-[10px] font-bold rounded-lg transition-colors whitespace-nowrap">
+                          Partial Pay
+                        </button>
+                        <button onClick={() => setModalState({ invoice: inv, isPartial: false })}
+                          className="px-2 py-1.5 bg-green-600 text-white text-[10px] font-bold rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap">
+                          Full Pay
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -173,9 +183,9 @@ export function ReceivablesTable({ data }: { data: any }) {
         </div>
       )}
 
-      {markPaidTarget && (
-        <MarkPaidModal invoice={markPaidTarget} onClose={() => setMarkPaidTarget(null)} onSaved={() => {
-          setMarkPaidTarget(null);
+      {modalState && (
+        <MarkPaidModal invoice={modalState.invoice} isPartial={modalState.isPartial} onClose={() => setModalState(null)} onSaved={() => {
+          setModalState(null);
           queryClient.invalidateQueries({ queryKey: ["accounts-receivables"] });
           queryClient.invalidateQueries({ queryKey: ["accounts-transactions"] });
           queryClient.invalidateQueries({ queryKey: ["accounts-summary"] });

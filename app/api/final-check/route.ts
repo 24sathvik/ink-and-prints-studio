@@ -37,14 +37,14 @@ export async function GET(req: Request) {
             finalDeliveryDate: true,
             status: true,
             customerName: true,
-            wipCard: { include: { checklists: true } }
+            wipCards: { include: { checklists: true } }
           }
         }
       }
     });
 
     const aggregated = finalChecks.map((fc: any) => {
-      const checklists = fc.invoice?.wipCard?.checklists || [];
+      const checklists = fc.invoice?.wipCards?.flatMap((wip: any) => wip.checklists || []) || [];
       const mergedChecklists = checklists.reduce((acc: Record<string, boolean>, curr: any) => {
         const booleansOnly = Object.keys(curr).reduce((bAcc: Record<string, boolean>, key: string) => {
           if (typeof curr[key] === 'boolean') {

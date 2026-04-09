@@ -109,7 +109,7 @@ function QuickEntryModal({
   );
 }
 
-export function CounterBalanceHero({ balance }: { balance: any }) {
+export function CounterBalanceHero({ balance, receivables }: { balance: any, receivables?: number }) {
   const queryClient = useQueryClient();
   const [modal, setModal] = useState<"CREDIT" | "DEBIT" | null>(null);
 
@@ -172,6 +172,25 @@ export function CounterBalanceHero({ balance }: { balance: any }) {
             >
               <Minus className="w-5 h-5" /> Add Debit
             </button>
+          </div>
+        </div>
+
+        {/* Financial Breakdown Panel */}
+        <div className="mt-6 pt-6 border-t border-brand-cream/10">
+          <p className="text-brand-cream/60 text-xs font-bold uppercase tracking-wider mb-3">Balance Composition</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-black/20 rounded-lg p-4 flex justify-between items-center">
+              <span className="text-sm font-medium text-brand-cream/80">Total Collected (Credits)</span>
+              <span className="font-bold text-green-300">{fmt(balance?.totalReceived ?? 0)}</span>
+            </div>
+            <div className="bg-black/20 rounded-lg p-4 flex justify-between items-center">
+              <span className="text-sm font-medium text-brand-cream/80">Adjustments (Debits)</span>
+              <span className="font-bold text-red-300">{fmt(balance?.totalAdjustments ?? 0)}</span>
+            </div>
+            <div className="bg-black/20 rounded-lg p-4 flex justify-between items-center">
+              <span className="text-sm font-medium text-brand-cream/80">Total Pending (Receivables)</span>
+              <span className="font-bold text-amber-300">{fmt(receivables ?? 0)}</span>
+            </div>
           </div>
         </div>
       </div>

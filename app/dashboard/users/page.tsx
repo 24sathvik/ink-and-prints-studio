@@ -92,7 +92,7 @@ export default function UsersPage() {
               </tr>
             </thead>
             <tbody className="divide-y">
-              {(Array.isArray(users) ? users : (users?.data || [])).map((user: any) => (
+              {(users || []).map((user: any) => (
                 <tr key={user.id} className="bg-card hover:bg-muted/50 transition-colors">
                   <td className="px-6 py-4 font-medium text-foreground">{user.name}</td>
                   <td className="px-6 py-4 text-muted-foreground">{user.email}</td>

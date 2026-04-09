@@ -53,6 +53,7 @@ export function InvoiceForm({ initialData, invoiceId }: {
     handleSubmit,
     control,
     setValue,
+    getValues,
     trigger,
     formState: { errors },
   } = useForm<FormValues>({
@@ -65,8 +66,19 @@ export function InvoiceForm({ initialData, invoiceId }: {
       advancePaid: false,
       packing: "WITHOUT_PACKING",
       contentConfirmedOn: new Date().toISOString().slice(0, 10),
+      invoiceNumber: initialData?.invoiceNumber ? Number(initialData.invoiceNumber) : undefined,
     } as any,
   });
+
+  // Init next invoice number if new invoice
+  useEffect(() => {
+    if (!invoiceId && nextNumberData?.nextNumber) {
+      const current = getValues("invoiceNumber");
+      if (!current) {
+        setValue("invoiceNumber", nextNumberData.nextNumber, { shouldValidate: true });
+      }
+    }
+  }, [nextNumberData, invoiceId, setValue]);
 
   // Watch fields for live calculations
   const qty = useWatch({ control, name: "quantity" }) || 0;
@@ -95,11 +107,19 @@ export function InvoiceForm({ initialData, invoiceId }: {
       }
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
+      const isNew = !invoiceId;
       toast.success(invoiceId ? "Invoice updated successfully" : "Invoice generated successfully");
+      // Invalidate all caches that this mutation affects
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["wip"] });
+      if (isNew && (variables as any)?.advancePaid) {
+        // New invoice with advance payment — ledger & summary need refreshing too
+        queryClient.invalidateQueries({ queryKey: ["accounts-transactions"] });
+        queryClient.invalidateQueries({ queryKey: ["accounts-summary"] });
+      }
       router.push("/dashboard/invoices");
-      router.refresh();
     },
     onError: (err: Error) => {
       toast.error(err.message || "Failed to save invoice.");
@@ -110,8 +130,8 @@ export function InvoiceForm({ initialData, invoiceId }: {
     setMounted(true);
   }, []);
 
-  const invoiceNumberRaw = initialData?.invoiceNumber;
-  const invoiceNumber = invoiceNumberRaw ? (typeof invoiceNumberRaw === "string" ? invoiceNumberRaw : `INV-${String(invoiceNumberRaw).padStart(4, "0")}`) : nextNumberData?.nextNumber || "Loading...";
+  const rawInvNumber = useWatch({ control, name: "invoiceNumber" });
+  const formattedInvoiceNumber = rawInvNumber ? `INV-${String(rawInvNumber).padStart(4, "0")}` : (invoiceId ? "Loading..." : (nextNumberData?.formattedNextNumber || "Loading..."));
 
   // PDF Preview Data Object
   const currentFormData = useWatch({ control });
@@ -122,7 +142,7 @@ export function InvoiceForm({ initialData, invoiceId }: {
     description: currentFormData.description || "",
     packing: currentFormData.packing || "WITHOUT_PACKING",
     advancePaid: currentFormData.advancePaid || false,
-    invoiceNumber,
+    invoiceNumber: formattedInvoiceNumber,
     quantity: Number(currentFormData.quantity || 0),
     unitRate: Number(currentFormData.unitRate || 0),
   };
@@ -131,14 +151,25 @@ export function InvoiceForm({ initialData, invoiceId }: {
     <form onSubmit={handleSubmit((d) => mutation.mutate(d as any))} className="space-y-8 pb-12 w-full max-w-5xl mx-auto">
       <div className="flex justify-between items-center pb-4 border-b">
         <div>
-          <h2 className="text-2xl font-bold text-brand-forest">
-            {invoiceId ? `Edit Invoice: ${invoiceNumber}` : `New Invoice: ${invoiceNumber}`}
-          </h2>
+          <div className="flex items-center gap-3">
+            <h2 className="text-2xl font-bold text-brand-forest">
+              {invoiceId ? "Edit Invoice" : "New Invoice"}
+            </h2>
+            <div className="flex items-center gap-1 bg-brand-cream/30 border border-brand-border px-2 py-1 rounded-md">
+              <span className="text-xl font-bold text-brand-forest">INV-</span>
+              <input
+                type="number"
+                {...register("invoiceNumber", { valueAsNumber: true })}
+                className="w-20 bg-transparent text-xl font-bold text-brand-forest focus:outline-none focus:ring-0"
+              />
+            </div>
+          </div>
+          {errors.invoiceNumber && <p className="text-xs text-destructive mt-1">{errors.invoiceNumber.message}</p>}
           <p className="text-sm text-muted-foreground mt-1">Fill in the sections below to complete the invoice.</p>
         </div>
         <div className="flex gap-3">
           {mounted && invoiceId && (
-            <PDFDownloadButton pdfData={pdfData} invoiceNumber={invoiceNumber} />
+            <PDFDownloadButton pdfData={pdfData} invoiceNumber={formattedInvoiceNumber} />
           )}
 
           <button

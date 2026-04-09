@@ -153,13 +153,16 @@ model Invoice {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  wipCard    WIPCard?
-  finalCheck FinalCheck?
-  purchase   Purchase?
+  wipCards           WIPCard[]
+  finalCheck         FinalCheck?
+  purchases          Purchase[]
+  counterTransaction CounterTransaction[]
 
-  @@index([finalDeliveryDate])
-  @@index([assigneeId])
   @@index([status])
+  @@index([createdAt])
+  @@index([finalDeliveryDate])
+  @@index([category])
+  @@index([assigneeId])
   @@index([deletedAt])
 }
 
@@ -193,7 +196,7 @@ model Lead {
 
 model WIPCard {
   id        String  @id @default(uuid())
-  invoiceId String  @unique
+  invoiceId String
   invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 
   // Denormalized
@@ -415,6 +418,7 @@ model Purchase {
   @@index([category])
   @@index([invoiceId])
   @@index([deletedAt])
+  @@index([leadSource])
 }
 
 model MonthlyExpense {
@@ -452,9 +456,13 @@ model CounterTransaction {
   createdAt      DateTime            @default(now())
   updatedAt      DateTime            @updatedAt
 
+  invoice        Invoice?            @relation(fields: [invoiceId], references: [id])
+  user           User                @relation(fields: [createdBy], references: [id])
+
   @@index([date])
   @@index([mode])
   @@index([type])
   @@index([category])
   @@index([deletedAt])
+  @@index([createdAt])
 }

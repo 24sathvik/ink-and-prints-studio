@@ -8,6 +8,7 @@ export const phoneSchema = z.string().regex(phoneRegex, "Must be a valid 10-digi
 export const positiveDecimal = z.number().nonnegative("Amount must be non-negative");
 
 export const invoiceCreateSchema = z.object({
+  invoiceNumber: z.coerce.number().int().positive().optional(),
   customerName: stringMax(100).min(1),
   phone: phoneSchema,
   brideName: stringMax(100).optional().nullable(),

@@ -124,7 +124,7 @@ export function InvoiceTable({ currentUserRole }: { currentUserRole: string }) {
       if (!params.has("limit")) params.set("limit", "20");
       if (!params.has("sortBy")) params.set("sortBy", "finalDeliveryDate");
       if (!params.has("order")) params.set("order", "asc");
-      if (!params.has("status")) params.set("status", "ACTIVE");
+      if (!params.has("status")) params.set("status", "ALL");
       
       const res = await fetch(`/api/invoices?${params.toString()}`, { cache: "no-store", headers: { 'Cache-Control': 'no-cache' } });
       if (!res.ok) throw new Error("Failed to load invoices");
@@ -246,7 +246,10 @@ export function InvoiceTable({ currentUserRole }: { currentUserRole: string }) {
                 return (
                   <tr key={inv.id} className={`border-b border-brand-border hover:opacity-90 transition-colors ${style.row}`}>
                     <td className="px-4 py-3 font-medium text-brand-muted">{(page - 1) * limit + index + 1}</td>
-                    <td className="px-4 py-3 font-bold text-brand-forest">INV-{String(inv.invoiceNumber).padStart(4, "0")}</td>
+                    <td className="px-4 py-3 font-bold text-brand-forest">
+                      INV-{String(inv.invoiceNumber).padStart(4, "0")}
+                      {inv.status === "CLOSED" && <span className="ml-2 inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide bg-green-100 text-green-700">Closed</span>}
+                    </td>
                     <td className="px-4 py-3 font-medium text-brand-black">{inv.customerName}</td>
                     <td className="px-4 py-3 max-w-[200px] truncate text-brand-black" title={inv.description}>{inv.description}</td>
                     <td className="px-4 py-3"><span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-brand-cream/80 text-brand-forest border border-brand-border">{inv.category || "Uncategorized"}</span></td>

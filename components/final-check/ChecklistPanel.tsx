@@ -127,6 +127,7 @@ export function ChecklistPanel({
     },
     onSuccess: (_data) => {
       setIsSaving(false);
+      queryClient.invalidateQueries({ queryKey: ["final-checks"] });
     },
     onError: () => {
       setIsSaving(false);
@@ -265,7 +266,7 @@ export function ChecklistPanel({
           acc.nextIndex += section.items.length;
           acc.elements.push(
             <div key={section.id} className="relative">
-              <div className="sticky top-0 bg-white/95 backdrop-blur py-2 z-10 border-b mb-6 flex justify-between items-end">
+              <div className="pt-4 mb-2 flex justify-between items-end border-b pb-2">
                 <h3 className="text-lg font-bold text-slate-800">
                   <span className="text-brand-forest mr-2">Sec {section.id}</span>
                   {section.title}

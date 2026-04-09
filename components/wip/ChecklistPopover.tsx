@@ -123,7 +123,10 @@ export function ChecklistPopover({ cardId, phase }: { cardId: string; phase: str
       }
       return { previous };
     },
-    onSettled: () => queryClient.invalidateQueries({ queryKey: ["checklist", cardId, phase] }),
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["checklist", cardId, phase] });
+      queryClient.invalidateQueries({ queryKey: ["final-checks"] });
+    },
   });
 
   const schema = CHECKLIST_SCHEMA[phase] || [];

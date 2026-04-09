@@ -66,6 +66,21 @@ export async function GET(req: Request) {
     const purchases = await (prisma as any).purchase.findMany({
       where,
       orderBy: { [orderByField]: order },
+      select: {
+        id: true, invoiceNumber: true, customerName: true, category: true, description: true,
+        quantity: true, billValue: true, leadSource: true,
+        designer1Name: true, designer1Cost: true, designer1PaymentStatus: true,
+        designer2Name: true, designer2Cost: true, designer2PaymentStatus: true,
+        printer1Name: true, printer1Cost: true, printer1PaymentStatus: true,
+        printer2Name: true, printer2Cost: true, printer2PaymentStatus: true,
+        rawMaterial1Name: true, rawMaterial1Cost: true, rawMaterial1PaymentStatus: true,
+        rawMaterial2Name: true, rawMaterial2Cost: true, rawMaterial2PaymentStatus: true,
+        postProcess1Name: true, postProcess1Cost: true, postProcess1PaymentStatus: true,
+        postProcess2Name: true, postProcess2Cost: true, postProcess2PaymentStatus: true,
+        totalDesignerCost: true, totalPrinterCost: true, totalRawMaterialCost: true, totalPostProcessCost: true,
+        totalProductionCost: true, profit: true, profitPercentage: true,
+        completedAt: true, notes: true
+      }
     });
 
     return NextResponse.json({ success: true, data: purchases });

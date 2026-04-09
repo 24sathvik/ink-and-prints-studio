@@ -18,7 +18,7 @@ export default function FinalCheckPage() {
   const { data: instances, isLoading } = useQuery({
     queryKey: ["final-checks"],
     queryFn: async () => {
-      const res = await fetch("/api/final-check");
+      const res = await fetch("/api/final-check", { cache: "no-store", headers: { 'Cache-Control': 'no-cache' } });
       if (!res.ok) throw new Error("Failed to load checklists");
       const json = await res.json();
       return json.success ? json.data : json;

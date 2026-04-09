@@ -355,18 +355,18 @@ export function DashboardSkeleton() {
     <div className="flex flex-col gap-8 w-full animate-pulse">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
         {[1,2,3,4,5,6].map(i => (
-          <div key={i} className="bg-slate-100 rounded-xl h-[120px] shadow-sm border border-slate-200"></div>
+          <div key={i} className="bg-slate-200 rounded-xl h-[120px] shadow-sm border border-slate-200"></div>
         ))}
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-slate-100 rounded-xl h-[300px] border border-slate-200"></div>
-        <div className="bg-slate-100 rounded-xl h-[300px] border border-slate-200"></div>
+        <div className="lg:col-span-2 bg-slate-200 rounded-xl h-[300px] border border-slate-200"></div>
+        <div className="bg-slate-200 rounded-xl h-[300px] border border-slate-200"></div>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-slate-100 rounded-xl h-[350px] border border-slate-200"></div>
+        <div className="lg:col-span-2 bg-slate-200 rounded-xl h-[350px] border border-slate-200"></div>
         <div className="flex flex-col gap-6">
-          <div className="bg-slate-100 rounded-xl h-[200px] border border-slate-200"></div>
-          <div className="bg-slate-100 rounded-xl h-[150px] border border-slate-200"></div>
+          <div className="bg-slate-200 rounded-xl h-[200px] border border-slate-200"></div>
+          <div className="bg-slate-200 rounded-xl h-[150px] border border-slate-200"></div>
         </div>
       </div>
     </div>

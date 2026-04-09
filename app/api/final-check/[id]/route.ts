@@ -59,12 +59,12 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     });
 
     if (Object.keys(checklistFields).length > 0) {
-      const wipCard = await (prisma as any).wIPCard.findUnique({
+      const wipCards = await (prisma as any).wIPCard.findMany({
         where: { invoiceId: updated.invoiceId },
         include: { checklists: true }
       });
       
-      if (wipCard && wipCard.checklists.length > 0) {
+      if (wipCards && wipCards.length > 0) {
         const prefixToPhase: Record<string, string> = {
           "rm": "RAW_MATERIALS",
           "d": "DESIGN",
@@ -77,12 +77,14 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
           const prefixMatch = key.match(/^(rm|d|p|pp|pay)_/);
           if (prefixMatch) {
             const phase = prefixToPhase[prefixMatch[1]];
-            const checklist = wipCard.checklists.find((c: any) => c.phase === phase);
-            if (checklist) {
-              await (prisma as any).wIPChecklist.update({
-                where: { id: checklist.id },
-                data: { [key]: value }
-              });
+            for (const wipCard of wipCards) {
+              const checklist = wipCard.checklists.find((c: any) => c.phase === phase);
+              if (checklist) {
+                await (prisma as any).wIPChecklist.update({
+                  where: { id: checklist.id },
+                  data: { [key]: value }
+                });
+              }
             }
           }
         }

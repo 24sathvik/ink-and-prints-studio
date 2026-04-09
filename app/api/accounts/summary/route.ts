@@ -29,11 +29,11 @@ export async function GET(req: Request) {
     const year = parseInt(searchParams.get("year") || String(now.getFullYear()));
 
     const monthStart = new Date(year, month - 1, 1);
-    const monthEnd = new Date(year, month, 0, 23, 59, 59, 999);
+    const nextMonthStart = new Date(year, month, 1);
 
     // --- Purchases this month ---
     const purchases = await (prisma as any).purchase.findMany({
-      where: { deletedAt: null, completedAt: { gte: monthStart, lte: monthEnd } },
+      where: { deletedAt: null, completedAt: { gte: monthStart, lt: nextMonthStart } },
       select: { billValue: true, totalProductionCost: true, profit: true },
     });
 
@@ -71,32 +71,45 @@ export async function GET(req: Request) {
     const counterBalance = await getCurrentCounterBalance();
 
     // --- Last 12 months trend ---
+    const elevenMonthsAgo = new Date(year, month - 12, 1);
+    
+    const [allPurchases, allExpenses] = await Promise.all([
+      (prisma as any).purchase.findMany({
+        where: { deletedAt: null, completedAt: { gte: elevenMonthsAgo, lt: nextMonthStart } },
+        select: { billValue: true, profit: true, completedAt: true },
+      }),
+      (prisma as any).monthlyExpense.findMany({
+        where: { deletedAt: null, OR: Array.from({ length: 12 }).map((_, i) => {
+          const d = new Date(year, month - 12 + i, 1);
+          return { month: d.getMonth() + 1, year: d.getFullYear() };
+        })},
+        select: { amount: true, month: true, year: true },
+      })
+    ]);
+
     const monthlySales = [];
     for (let i = 11; i >= 0; i--) {
       const d = new Date(year, month - 1 - i, 1);
       const m = d.getMonth() + 1;
       const y = d.getFullYear();
-      const mStart = new Date(y, m - 1, 1);
-      const mEnd = new Date(y, m, 0, 23, 59, 59, 999);
+      
+      const mStart = new Date(y, m - 1, 1).getTime();
+      const mNextStart = new Date(y, m, 1).getTime();
 
-      const mPurchases = await (prisma as any).purchase.findMany({
-        where: { deletedAt: null, completedAt: { gte: mStart, lte: mEnd } },
-        select: { billValue: true, profit: true },
+      const mPurchases = allPurchases.filter((p: any) => {
+        const t = new Date(p.completedAt).getTime();
+        return t >= mStart && t < mNextStart;
       });
-      const mExpenses = await (prisma as any).monthlyExpense.findMany({
-        where: { month: m, year: y, deletedAt: null },
-        select: { amount: true },
-      });
+      const mExps = allExpenses.filter((e: any) => e.month === m && e.year === y);
 
       const mRevenue = mPurchases.reduce((s: number, p: any) => s + Number(p.billValue), 0);
       const mGrossProfit = mPurchases.reduce((s: number, p: any) => s + Number(p.profit), 0);
-      const mExpTotal = mExpenses.reduce((s: number, e: any) => s + Number(e.amount), 0);
-      const mNetProfit = mGrossProfit - mExpTotal;
+      const mExpTotal = mExps.reduce((s: number, e: any) => s + Number(e.amount), 0);
 
       monthlySales.push({
         month: d.toLocaleString("en-IN", { month: "short", year: "numeric" }),
         revenue: mRevenue,
-        profit: mNetProfit,
+        profit: mGrossProfit - mExpTotal,
       });
     }
 

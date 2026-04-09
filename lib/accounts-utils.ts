@@ -65,12 +65,22 @@ export async function getCurrentCounterBalance() {
   });
 
   let cash = 0, online = 0, upi = 0;
+  let totalReceived = 0, totalAdjustments = 0;
+  
   for (const t of allTxns) {
-    const amt = Number(t.amount) * (t.type === "CREDIT" ? 1 : -1);
-    if (t.mode === "CASH") cash += amt;
-    else if (t.mode === "ONLINE" || t.mode === "BANK_TRANSFER") online += amt;
-    else if (t.mode === "UPI") upi += amt;
+    const amt = Number(t.amount);
+    if (t.type === "CREDIT") {
+      totalReceived += amt;
+      if (t.mode === "CASH") cash += amt;
+      else if (t.mode === "ONLINE" || t.mode === "BANK_TRANSFER") online += amt;
+      else if (t.mode === "UPI") upi += amt;
+    } else {
+      totalAdjustments += amt;
+      if (t.mode === "CASH") cash -= amt;
+      else if (t.mode === "ONLINE" || t.mode === "BANK_TRANSFER") online -= amt;
+      else if (t.mode === "UPI") upi -= amt;
+    }
   }
 
-  return { total, cash, online, upi, lastUpdated: txns[0].createdAt };
+  return { total, cash, online, upi, lastUpdated: txns[0].createdAt, totalReceived, totalAdjustments };
 }

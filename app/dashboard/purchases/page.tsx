@@ -11,6 +11,7 @@ import {
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { PurchaseDrawer } from "@/components/purchases/PurchaseDrawer";
+import { PurchasesPageSkeleton } from "@/components/purchases/PurchasesPageSkeleton";
 
 // ---- helpers ----
 function fmt(n: any) {
@@ -232,9 +233,7 @@ export default function PurchasesPage() {
       {/* ── TABLE ── */}
       <div className="flex-1 bg-white rounded-xl border border-brand-border shadow-sm overflow-hidden flex flex-col">
         {isLoading ? (
-          <div className="flex-1 flex items-center justify-center text-brand-muted">
-            <Loader2 className="w-8 h-8 animate-spin text-brand-forest" />
-          </div>
+        <PurchasesPageSkeleton />
         ) : purchases.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center text-brand-muted gap-2 p-8">
             <IndianRupee className="w-10 h-10 opacity-20" />

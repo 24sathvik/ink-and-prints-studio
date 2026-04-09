@@ -41,43 +41,65 @@ export async function GET(req: Request) {
       return NextResponse.json({ success: false, error: "Missing userId parameter" }, { status: 400 });
     }
 
-    const trendData = [];
-    
+
     // Also fetch the grand total for the exact requested window
-    const grandTotalStats = await (prisma.invoice as any).aggregate({
-      where: {
-        assigneeId: userId,
-        createdAt: { gte: startDt, lte: endDt },
-        deletedAt: null
-      },
-      _count: { id: true },
-      _sum: { totalAmount: true }
-    });
-
-    // Loop backwards to collect monthly data inside the window
-    for (let i = numMonths - 1; i >= 0; i--) {
-      const d = new Date(endDt.getFullYear(), endDt.getMonth() - i, 1);
-      const mStart = new Date(d.getFullYear(), d.getMonth(), 1);
-      const mEnd = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999);
-
-      // Clamp within actual requested dates
-      const actualStart = mStart < startDt ? startDt : mStart;
-      const actualEnd = mEnd > endDt ? endDt : mEnd;
-
-      const stats: any = await (prisma.invoice as any).aggregate({
+    const [grandTotalStats, storeGrandTotalStats] = await Promise.all([
+      (prisma.invoice as any).aggregate({
         where: {
           assigneeId: userId,
-          createdAt: { gte: actualStart, lte: actualEnd },
+          createdAt: { gte: startDt, lte: endDt },
           deletedAt: null
         },
         _count: { id: true },
-        _sum: { totalAmount: true },
-      });
+        _sum: { totalAmount: true }
+      }),
+      (prisma.invoice as any).aggregate({
+        where: {
+          createdAt: { gte: startDt, lte: endDt },
+          deletedAt: null
+        },
+        _count: { id: true },
+        _sum: { totalAmount: true }
+      })
+    ]);
+
+    // Fetch ALL invoices in the window in one parallel shot (2 queries total instead of 2N)
+    const [allUserInvoices, allStoreInvoices] = await Promise.all([
+      (prisma.invoice as any).findMany({
+        where: { assigneeId: userId, createdAt: { gte: startDt, lte: endDt }, deletedAt: null },
+        select: { totalAmount: true, createdAt: true },
+      }),
+      (prisma.invoice as any).findMany({
+        where: { createdAt: { gte: startDt, lte: endDt }, deletedAt: null },
+        select: { totalAmount: true, createdAt: true },
+      }),
+    ]);
+
+    // Bucket by month in JS
+    const trendData = [];
+    for (let i = numMonths - 1; i >= 0; i--) {
+      const d = new Date(endDt.getFullYear(), endDt.getMonth() - i, 1);
+      const mStart = new Date(d.getFullYear(), d.getMonth(), 1);
+      const mEnd = new Date(d.getFullYear(), d.getMonth() + 1, 1);
+
+      // Clamp within actual requested dates
+      const actualStart = mStart < startDt ? startDt.getTime() : mStart.getTime();
+      const actualEnd = mEnd > endDt ? endDt.getTime() : mEnd.getTime();
+
+      const filterInRange = (inv: any) => {
+        const t = new Date(inv.createdAt).getTime();
+        return t >= actualStart && t <= actualEnd;
+      };
+
+      const monthUser = allUserInvoices.filter(filterInRange);
+      const monthStore = allStoreInvoices.filter(filterInRange);
 
       trendData.push({
         month: d.toLocaleString("default", { month: "short" }) + " '" + String(d.getFullYear()).slice(2),
-        invoices: stats._count.id || 0,
-        revenue: Number(stats._sum.totalAmount || 0)
+        invoices: monthUser.length,
+        revenue: monthUser.reduce((s: number, inv: any) => s + Number(inv.totalAmount || 0), 0),
+        storeInvoices: monthStore.length,
+        storeRevenue: monthStore.reduce((s: number, inv: any) => s + Number(inv.totalAmount || 0), 0),
       });
     }
 
@@ -86,7 +108,9 @@ export async function GET(req: Request) {
       data: {
         totals: {
           invoices: grandTotalStats._count.id || 0,
-          revenue: Number(grandTotalStats._sum.totalAmount || 0)
+          revenue: Number(grandTotalStats._sum.totalAmount || 0),
+          storeInvoices: storeGrandTotalStats._count.id || 0,
+          storeRevenue: Number(storeGrandTotalStats._sum.totalAmount || 0),
         },
         trend: trendData
       } 

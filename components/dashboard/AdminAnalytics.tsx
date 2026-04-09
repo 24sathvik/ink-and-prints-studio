@@ -68,7 +68,6 @@ export function AdminAnalytics() {
                 <th className="pb-2 text-left font-semibold text-slate-500 text-xs uppercase tracking-wide">Month</th>
                 <th className="pb-2 text-right font-semibold text-slate-500 text-xs uppercase tracking-wide">Invoices</th>
                 <th className="pb-2 text-right font-semibold text-slate-500 text-xs uppercase tracking-wide">Revenue</th>
-                <th className="pb-2 text-right font-semibold text-slate-500 text-xs uppercase tracking-wide">Avg Value</th>
                 <th className="pb-2 text-right font-semibold text-slate-500 text-xs uppercase tracking-wide">Net Profit</th>
               </tr>
             </thead>
@@ -78,7 +77,6 @@ export function AdminAnalytics() {
                   <td className="py-3 font-medium whitespace-nowrap">{row.month}</td>
                   <td className="py-3 text-right tabular-nums">{row.totalInvoices}</td>
                   <td className="py-3 text-right font-semibold tabular-nums">₹{parseFloat(String(row.revenue)).toLocaleString("en-IN")}</td>
-                  <td className="py-3 text-right tabular-nums">₹{parseFloat(String(row.avgInvoiceValue)).toLocaleString("en-IN")}</td>
                   <td className={`py-3 text-right font-bold tabular-nums ${row.netProfit >= 0 ? "text-green-600" : "text-red-600"}`}>
                     {row.netProfit >= 0 ? "+" : ""}₹{Math.abs(parseFloat(String(row.netProfit))).toLocaleString("en-IN")}
                   </td>

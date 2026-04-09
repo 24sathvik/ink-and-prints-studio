@@ -33,7 +33,11 @@ export function KanbanBoard({
   initialData: Record<string, any[]>;
   isAdmin: boolean;
 }) {
-  const [columns, setColumns] = useState<Record<string, any[]>>(initialData);
+  const [columns, setColumns] = useState<Record<string, any[]>>(() => {
+    const cols = { ...initialData };
+    PHASES.forEach(p => { if (!cols[p]) cols[p] = []; });
+    return cols;
+  });
   const [activeCard, setActiveCard] = useState<any | null>(null);
   
   const queryClient = useQueryClient();
@@ -57,8 +61,23 @@ export function KanbanBoard({
       });
       if (!res.ok) throw new Error("Failed to move card");
     },
-    onError: () => {
+    onMutate: async () => {
+      // Cancel any outgoing refetches so they don't overwrite our optimistic update
+      await queryClient.cancelQueries({ queryKey: ["wip"] });
+      // Snapshot previous value for rollback
+      const previous = queryClient.getQueryData(["wip"]);
+      return { previous };
+    },
+    onError: (_err, _vars, context: any) => {
       toast.error("Failed to save card position.");
+      // Rollback to previous server state
+      if (context?.previous) {
+        queryClient.setQueryData(["wip"], context.previous);
+      }
+      queryClient.invalidateQueries({ queryKey: ["wip"] });
+    },
+    onSettled: () => {
+      // Always refetch after error or success to ensure sync
       queryClient.invalidateQueries({ queryKey: ["wip"] });
     }
   });

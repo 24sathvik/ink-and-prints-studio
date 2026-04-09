@@ -44,6 +44,7 @@ export async function GET(req: Request) {
       DESIGN: [],
       PRINTING: [],
       POST_PRINTING: [],
+      PAYMENT_PENDING: [],
     } as Record<string, any[]>;
 
     rawWipCards.forEach((card: any) => {

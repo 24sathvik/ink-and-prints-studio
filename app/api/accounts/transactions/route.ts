@@ -63,6 +63,10 @@ export async function GET(req: Request) {
       (prisma as any).counterTransaction.findMany({
         where, orderBy: { date: "desc" },
         skip: (page - 1) * limit, take: limit,
+        include: { 
+          invoice: { select: { customerName: true } },
+          user: { select: { name: true } }
+        }
       }),
       (prisma as any).counterTransaction.count({ where }),
     ]);
@@ -149,10 +153,23 @@ export async function POST(req: Request) {
       });
 
       if (category === "INVOICE_BALANCE" && invoiceId) {
-        await (tx as any).invoice.update({
-          where: { id: invoiceId },
-          data: { balancePaid: true, balance: 0 },
-        });
+        const inv = await (tx as any).invoice.findUnique({ where: { id: invoiceId } });
+        if (inv) {
+          const currentBalance = new Decimal(inv.balance || 0);
+          const remainingBalance = currentBalance.minus(amountDecimal);
+          
+          if (remainingBalance.lte(0)) {
+            await (tx as any).invoice.update({
+              where: { id: invoiceId },
+              data: { balancePaid: true, balance: 0 },
+            });
+          } else {
+            await (tx as any).invoice.update({
+              where: { id: invoiceId },
+              data: { balance: remainingBalance },
+            });
+          }
+        }
       }
 
       return txn;

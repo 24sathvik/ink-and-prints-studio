@@ -34,6 +34,7 @@ export async function GET(req: Request) {
     const sortBy = searchParams.get("sortBy") || "finalDeliveryDate";
     const order = searchParams.get("order") || "asc";
     const status = searchParams.get("status") || "ACTIVE";
+    const filter = searchParams.get("filter");
     
     // Advanced Filters
     const category = searchParams.get("category");
@@ -60,7 +61,24 @@ export async function GET(req: Request) {
     }
 
     if (assigneeId && assigneeId !== "all") where.assigneeId = assigneeId;
-    if (status && status !== "ALL") where.status = status;
+    
+    // Apply Stat Card Filter Overrides
+    if (filter === "active") {
+      where.status = "ACTIVE";
+    } else if (filter === "deliveries") {
+      where.status = "ACTIVE";
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const in7Days = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+      where.finalDeliveryDate = { gte: today, lte: in7Days };
+    } else if (filter === "overdue") {
+      where.status = "ACTIVE";
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      where.finalDeliveryDate = { lt: today };
+    } else if (status && status !== "ALL") {
+      where.status = status;
+    }
 
     if (category && category !== "all") {
       const cats = category.split(",").map(c => c.trim()).filter(Boolean);
@@ -151,37 +169,55 @@ export async function POST(req: Request) {
 
     // DB Query uses Prisma ORM parameterized queries natively
     const result = await prisma.$transaction(async (tx) => {
+      // Check for uniqueness if invoiceNumber is manually set
+      if (data.invoiceNumber) {
+        const existing = await (tx as any).invoice.findUnique({
+          where: { invoiceNumber: data.invoiceNumber }
+        });
+        if (existing) {
+          throw new Error(`Invoice number ${data.invoiceNumber} is already in use.`);
+        }
+      }
+
+      const createData: any = {
+        customerName: data.customerName,
+        phone: data.phone,
+        brideName: data.brideName || "",
+        groomName: data.groomName || "",
+        category: data.category,
+        modelNumber: data.modelNumber || "",
+        description: data.description,
+        date: data.date ? new Date(data.date) : new Date(),
+        quantity,
+        toleranceQuantity,
+        unitRate,
+        totalAmount,
+        advancePaid: data.advancePaid,
+        advanceAmount,
+        advanceMode: data.advancePaid && data.advanceMode ? data.advanceMode : null,
+        balance,
+        balancePaid: balance !== null && balance <= 0,
+        balanceMode: data.balanceMode || null,
+        estimatedDesignTime: data.estimatedDesignTime || "",
+        estimatedPrintTime: data.estimatedPrintTime || "",
+        packing: data.packing,
+        printingColor: data.printingColor,
+        designer: data.designer,
+        printer: data.printer,
+        additionalNotes: data.additionalNotes,
+        contentConfirmedOn: data.contentConfirmedOn ? new Date(data.contentConfirmedOn) : null,
+        finalDeliveryDate: data.finalDeliveryDate ? new Date(data.finalDeliveryDate) : null,
+        assigneeId: data.assigneeId || session.user.id,
+        createdById: session.user.id,
+        status: "ACTIVE",
+      };
+
+      if (data.invoiceNumber) {
+        createData.invoiceNumber = data.invoiceNumber;
+      }
+
       const invoice = await (tx as any).invoice.create({
-        data: {
-          customerName: data.customerName,
-          phone: data.phone,
-          brideName: data.brideName || "",
-          groomName: data.groomName || "",
-          category: data.category,
-          modelNumber: data.modelNumber || "",
-          description: data.description,
-          date: data.date ? new Date(data.date) : new Date(),
-          quantity,
-          toleranceQuantity,
-          unitRate,
-          totalAmount,
-          advancePaid: data.advancePaid,
-          advanceAmount,
-          advanceMode: data.advancePaid && data.advanceMode ? data.advanceMode : null,
-          balance,
-          balancePaid: balance !== null && balance <= 0,
-          balanceMode: data.balanceMode || null,
-          estimatedDesignTime: data.estimatedDesignTime || "",
-          estimatedPrintTime: data.estimatedPrintTime || "",
-          packing: data.packing,
-          printingColor: data.printingColor,
-          designer: data.designer,
-          printer: data.printer,
-          additionalNotes: data.additionalNotes,
-          assigneeId: data.assigneeId || session.user.id,
-          createdById: session.user.id,
-          status: "ACTIVE",
-        },
+        data: createData,
       });
 
       const formattedNumber = `INV-${String(invoice.invoiceNumber).padStart(4, "0")}`;
@@ -201,6 +237,42 @@ export async function POST(req: Request) {
           checklists: { create: { phase: "RAW_MATERIALS", invoiceId: invoice.id } }
         }
       });
+
+      await (tx as any).wIPCard.create({
+        data: {
+          ...cardBaseParams,
+          phase: "DESIGN",
+          checklists: { create: { phase: "DESIGN", invoiceId: invoice.id } }
+        }
+      });
+
+      // BACKFILL/LOG: Write advance payment to transaction ledger
+      if (invoice.advancePaid && invoice.advanceAmount && invoice.advanceAmount > 0) {
+        // Compute running balance
+        const latest = await (tx as any).counterTransaction.findFirst({
+          where: { deletedAt: null },
+          orderBy: { createdAt: "desc" },
+          select: { runningBalance: true },
+        });
+
+        const prevBalance = latest ? Number(latest.runningBalance) : 0;
+        const newBalance = prevBalance + Number(invoice.advanceAmount);
+
+        await (tx as any).counterTransaction.create({
+          data: {
+            type: "CREDIT",
+            mode: invoice.advanceMode || "CASH",
+            amount: invoice.advanceAmount,
+            description: `Advance received for ${formattedNumber}`,
+            category: "INVOICE_ADVANCE",
+            invoiceId: invoice.id,
+            invoiceNumber: formattedNumber,
+            runningBalance: newBalance,
+            createdBy: session.user.id,
+            date: invoice.date,
+          }
+        });
+      }
 
       return { ...invoice, invoiceNumberFormatted: formattedNumber };
     });

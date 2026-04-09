@@ -83,43 +83,68 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
 
     // DB Query uses Prisma ORM which automatically parameterizes inputs
     const result = await prisma.$transaction(async (tx) => {
+      // Fetch existing invoice to check its current invoiceNumber
+      const currentInvoice = await (tx as any).invoice.findUnique({ where: { id } });
+
+      if (data.invoiceNumber && currentInvoice.invoiceNumber !== data.invoiceNumber) {
+        const existing = await (tx as any).invoice.findUnique({
+          where: { invoiceNumber: data.invoiceNumber }
+        });
+        if (existing) {
+          throw new Error(`Invoice number ${data.invoiceNumber} is already in use.`);
+        }
+      }
+
+      const updateData: any = {
+        customerName: data.customerName,
+        phone: data.phone,
+        brideName: data.brideName || "",
+        groomName: data.groomName || "",
+        modelNumber: data.modelNumber || "",
+        description: data.description,
+        date: data.date ? new Date(data.date) : new Date(),
+        quantity,
+        toleranceQuantity,
+        unitRate,
+        totalAmount,
+        advancePaid: data.advancePaid,
+        advanceAmount,
+        advanceMode: data.advancePaid && data.advanceMode ? data.advanceMode : null,
+        balance,
+        balancePaid: balance !== null && balance <= 0,
+        balanceMode: data.balanceMode || null,
+        estimatedDesignTime: data.estimatedDesignTime || "",
+        estimatedPrintTime: data.estimatedPrintTime || "",
+        packing: data.packing,
+        printingColor: data.printingColor,
+        designer: data.designer,
+        printer: data.printer,
+        additionalNotes: data.additionalNotes,
+        contentConfirmedOn: data.contentConfirmedOn ? new Date(data.contentConfirmedOn) : null,
+        finalDeliveryDate: data.finalDeliveryDate ? new Date(data.finalDeliveryDate) : null,
+        assigneeId: data.assigneeId || session.user.id,
+      };
+
+      if (data.invoiceNumber) {
+        updateData.invoiceNumber = data.invoiceNumber;
+      }
+
       const updatedInvoice = await (tx as any).invoice.update({
         where: { id },
-        data: {
-          customerName: data.customerName,
-          phone: data.phone,
-          brideName: data.brideName || "",
-          groomName: data.groomName || "",
-          modelNumber: data.modelNumber || "",
-          description: data.description,
-          date: data.date ? new Date(data.date) : new Date(),
-          quantity,
-          toleranceQuantity,
-          unitRate,
-          totalAmount,
-          advancePaid: data.advancePaid,
-          advanceAmount,
-          advanceMode: data.advancePaid && data.advanceMode ? data.advanceMode : null,
-          balance,
-          balancePaid: balance !== null && balance <= 0,
-          balanceMode: data.balanceMode || null,
-          estimatedDesignTime: data.estimatedDesignTime || "",
-          estimatedPrintTime: data.estimatedPrintTime || "",
-          packing: data.packing,
-          printingColor: data.printingColor,
-          designer: data.designer,
-          printer: data.printer,
-          additionalNotes: data.additionalNotes,
-          contentConfirmedOn: data.contentConfirmedOn ? new Date(data.contentConfirmedOn) : null,
-          finalDeliveryDate: data.finalDeliveryDate ? new Date(data.finalDeliveryDate) : null,
-          assigneeId: data.assigneeId || session.user.id,
-        },
+        data: updateData,
       });
 
       // Update the denormalized fields
+      const formattedNumber = `INV-${String(updatedInvoice.invoiceNumber).padStart(4, "0")}`;
+
       await (tx as any).wIPCard.updateMany({
         where: { invoiceId: id },
-        data: { description: data.description, quantity, customerName: data.customerName },
+        data: { 
+          description: data.description, 
+          quantity, 
+          customerName: data.customerName,
+          invoiceNumber: formattedNumber
+        },
       });
 
       await (tx as any).finalCheck.updateMany({
@@ -130,6 +155,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
           designer: data.designer || null,
           printer: data.printer || null,
           modelNumber: data.modelNumber || "",
+          invoiceNumber: formattedNumber
         },
       });
 
@@ -160,7 +186,7 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
       where: { id },
       data: {
         deletedAt: new Date(),
-        wipCard: { update: { deletedAt: new Date() } },
+        wipCards: { updateMany: { where: {}, data: { deletedAt: new Date() } } },
         finalCheck: { update: { deletedAt: new Date() } }
       } as any,
     });

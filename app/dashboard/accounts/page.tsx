@@ -5,13 +5,14 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 import {
-  IndianRupee, TrendingDown, TrendingUp, Percent, Loader2, Calendar
+  IndianRupee, TrendingDown, TrendingUp, Percent, Calendar
 } from "lucide-react";
 import { CounterBalanceHero } from "@/components/accounts/CounterBalanceHero";
 import { ExpensesTable } from "@/components/accounts/ExpensesTable";
 import { TransactionLedger } from "@/components/accounts/TransactionLedger";
 import { ReceivablesTable } from "@/components/accounts/ReceivablesTable";
 import { MonthlySalesChart } from "@/components/accounts/MonthlySalesChart";
+import { AccountsPageSkeleton } from "@/components/accounts/AccountsPageSkeleton";
 
 function fmt(n: number) {
   return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 }).format(n);
@@ -104,11 +105,11 @@ export default function AccountsPage() {
       </div>
 
       {sumLoading ? (
-        <div className="flex justify-center p-12"><Loader2 className="w-8 h-8 animate-spin text-brand-forest" /></div>
+        <AccountsPageSkeleton />
       ) : (
         <>
           {/* 1. Counter Balance Hero */}
-          <CounterBalanceHero balance={summary?.counterBalance} />
+          <CounterBalanceHero balance={summary?.counterBalance} receivables={summary?.receivables} />
 
           {/* 2. Month Selector */}
           <div className="flex items-center gap-3 bg-white p-2 rounded-xl border border-brand-border w-fit shadow-sm">

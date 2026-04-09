@@ -198,15 +198,17 @@ export function PerformanceCharts({ teamData }: { teamData: TeamMemberStat[] }) 
               <LineChart data={trendData} margin={{ top: 20, right: 20, left: -10, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.2} />
                 <XAxis dataKey="month" tick={{fontSize: 11}} tickLine={false} axisLine={false} />
-                <YAxis yAxisId="left" allowDecimals={false} tick={{fontSize: 11}} tickLine={false} axisLine={false} domain={[0, 'auto']} />
-                <YAxis yAxisId="right" orientation="right" tickFormatter={(v) => `₹${v/1000}k`} tick={{fontSize: 11}} tickLine={false} axisLine={false} />
+                <YAxis yAxisId="left" allowDecimals={false} tick={{fontSize: 11}} tickLine={false} axisLine={false} domain={[0, 'auto']} tickFormatter={(v) => Math.floor(v).toString()} />
+                <YAxis yAxisId="right" orientation="right" allowDecimals={false} tickFormatter={(v) => `₹${Math.floor(v/1000)}k`} tick={{fontSize: 11}} tickLine={false} axisLine={false} domain={[0, 'auto']} />
                 <Tooltip 
                   contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '12px' }}
                   formatter={(value: any, name: any) => [name === 'revenue' ? formatCurrency(Number(value)) : value, name === 'revenue' ? 'Revenue' : 'Invoices']}
                 />
                 <Legend iconType="circle" wrapperStyle={{ fontSize: '12px' }} />
-                <Line yAxisId="left" type="monotone" dataKey="invoices" stroke="#3b82f6" strokeWidth={3} dot={{ r: 4, fill: '#3b82f6' }} activeDot={{ r: 6 }} name="Invoices" />
-                <Line yAxisId="right" type="monotone" dataKey="revenue" stroke="#32612d" strokeWidth={3} dot={{ r: 4, fill: '#32612d' }} activeDot={{ r: 6 }} name="Revenue" />
+                <Line yAxisId="left" type="monotone" dataKey="invoices" stroke="#3b82f6" strokeWidth={3} dot={{ r: 4, fill: '#3b82f6' }} activeDot={{ r: 6 }} name="My Invoices" />
+                <Line yAxisId="left" type="monotone" dataKey="storeInvoices" stroke="#64748b" strokeWidth={2} strokeDasharray="5 5" dot={false} activeDot={{ r: 4 }} name="Total Store Invoices" />
+                <Line yAxisId="right" type="monotone" dataKey="revenue" stroke="#32612d" strokeWidth={3} dot={{ r: 4, fill: '#32612d' }} activeDot={{ r: 6 }} name="My Revenue" />
+                <Line yAxisId="right" type="monotone" dataKey="storeRevenue" stroke="#1e293b" strokeWidth={2} strokeDasharray="5 5" dot={false} activeDot={{ r: 4 }} name="Total Store Revenue" />
               </LineChart>
             </ResponsiveContainer>
           )}
