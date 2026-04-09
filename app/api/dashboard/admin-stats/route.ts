@@ -40,7 +40,7 @@ export async function GET(req: Request) {
     const [allInvoices, categoriesAggr, allPurchases, allExpenses] = await Promise.all([
       (prisma.invoice as any).findMany({
         where: { createdAt: { gte: rangeStart, lte: now }, deletedAt: null },
-        select: { totalAmount: true, createdAt: true },
+        select: { createdAt: true },
       }),
       (prisma.invoice as any).groupBy({
         by: ['category'],
@@ -88,7 +88,8 @@ export async function GET(req: Request) {
       monthlyData.push({
         month: monthKey,
         totalInvoices: monthInvoices.length,
-        revenue: monthInvoices.reduce((s: number, inv: any) => s + Number(inv.totalAmount || 0), 0),
+        // Use purchase.billValue as revenue — identical to accounts/summary
+        revenue: mGrossRevenue,
         netProfit,
       });
     }
