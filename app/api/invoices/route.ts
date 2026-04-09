@@ -214,6 +214,13 @@ export async function POST(req: Request) {
 
       if (data.invoiceNumber) {
         createData.invoiceNumber = data.invoiceNumber;
+      } else {
+        // Bypass Postgres auto-increment sequence which may be desynchronized
+        const latestInv = await (tx as any).invoice.findFirst({
+          orderBy: { invoiceNumber: "desc" },
+          select: { invoiceNumber: true },
+        });
+        createData.invoiceNumber = (latestInv?.invoiceNumber || 0) + 1;
       }
 
       const invoice = await (tx as any).invoice.create({
