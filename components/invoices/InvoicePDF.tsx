@@ -1,64 +1,48 @@
 import React from "react";
-import { Page, Text, View, Document, StyleSheet } from "@react-pdf/renderer";
+import { Page, Text, View, Document, StyleSheet, Image } from "@react-pdf/renderer";
 import { format } from "date-fns";
 
 const styles = StyleSheet.create({
   page: {
-    paddingTop: 40,
-    paddingBottom: 40,
-    paddingLeft: 50,
-    paddingRight: 50,
+    padding: 15,
     fontFamily: "Helvetica",
     fontSize: 10,
     color: "#000000",
+    backgroundColor: "#FCFAEF",
+  },
+  pageBorder: {
+    border: "2px solid #1E432B",
+    padding: 15,
+    flex: 1,
   },
   // Header
-  headerContainer: {
+  headerTopLayout: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: 20,
+    marginBottom: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: "#1E432B",
+    paddingBottom: 15,
   },
-  logoBlock: {
-    width: 48,
-    height: 48,
-    backgroundColor: "#717f65",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 8,
-    borderRadius: 4,
+  logoImage: {
+    height: 60,
+    objectFit: "contain",
   },
-  logoText: {
-    color: "#ffffff",
-    fontSize: 18,
-    fontFamily: "Helvetica",
-    fontWeight: "bold",
-  },
-  brandTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#32612d",
-  },
-  brandSubtitle: {
-    fontSize: 10,
-    fontWeight: "normal",
-    color: "#717f65",
-    letterSpacing: 2,
-    marginBottom: 6,
-  },
-  brandInfo: {
-    fontSize: 9,
-    color: "#333333",
-    lineHeight: 1.4,
+  headerContainer: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    alignItems: "flex-start",
+    marginBottom: 15,
   },
   headerRight: {
     alignItems: "flex-end",
   },
   invoiceTitle: {
-    fontSize: 28,
+    fontSize: 22,
     fontWeight: "bold",
     color: "#32612d",
-    marginBottom: 6,
+    marginBottom: 4,
     letterSpacing: 1,
   },
   invoiceMeta: {
@@ -170,11 +154,13 @@ const styles = StyleSheet.create({
     borderColor: "#d6d0c4",
   },
   paymentLabel: {
-    fontSize: 10,
+    fontSize: 9,
     color: "#333333",
+    flex: 1,
+    paddingRight: 10,
   },
   paymentValue: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: "bold",
     textAlign: "right",
   },
@@ -233,6 +219,25 @@ const styles = StyleSheet.create({
   },
 
   // Footer
+  termsArea: {
+    marginTop: 10,
+    marginBottom: 5,
+  },
+  termItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  // Checkbox removed as we use text bullets now
+  paymentSection: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 30,
+    borderWidth: 1,
+    borderColor: "#d6d0c4",
+    padding: 10,
+    backgroundColor: "#f9f8f3",
+  },
   footerRow: {
     borderTopWidth: 1,
     borderColor: "#717f65",
@@ -281,10 +286,15 @@ interface PDFData {
   estimatedPrintTime?: string | null;
   finalDeliveryDate?: string | Date | null;
   packing: string;
+  termWastage?: boolean;
+  termVariation?: boolean;
+  termProofread?: boolean;
+  termCancellation?: boolean;
 }
 
 function fmtCurrency(amount: number) {
-  return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(amount || 0);
+  const formatter = new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return `Rs. ${formatter.format(amount || 0)}`;
 }
 
 function safeDate(d: any) {
@@ -306,31 +316,35 @@ export const InvoicePDF = ({ data }: { data: PDFData }) => {
   const balance = totalAmount - advanceAmount;
   const isBalanceUnpaid = balance > 0 && !data.balancePaid;
 
-  const studioAddress = process.env.NEXT_PUBLIC_STUDIO_ADDRESS || "123 Printing Hub Road, Creative District\nHyderabad, TG 500001";
-
   return (
     <Document>
       <Page size="A4" style={styles.page}>
-        
-        {/* HEADER */}
-        <View style={styles.headerContainer}>
-          <View>
-            <View style={styles.logoBlock}>
-              <Text style={styles.logoText}>I&P</Text>
+        <View style={styles.pageBorder}>
+          <View style={styles.headerTopLayout}>
+            <View style={{ width: "50%", alignItems: "flex-start" }}>
+               <Image src="/logo.png" style={{ height: 65, objectFit: "contain", marginBottom: 8 }} />
+               <View>
+                  <Text style={{ fontSize: 13, fontWeight: "bold", color: "#1E432B", marginBottom: 3, fontStyle: "italic" }}>
+                    Brand of : Devi Wedding Card Centre
+                  </Text>
+                  <Text style={{ fontSize: 10, color: "#1E432B", marginBottom: 1 }}>
+                    H.No. 1-7-189, Opp. ECIL Bus Terminal lane,
+                  </Text>
+                  <Text style={{ fontSize: 10, color: "#1E432B", marginBottom: 1 }}>
+                    Kamala Nagar, ECIL &apos;X&apos; Road, Hyderabad 500062
+                  </Text>
+                  <Text style={{ fontSize: 10, color: "#1E432B", fontWeight: "bold", marginTop: 2 }}>
+                    Phone: 93471 33787, 81432 90307
+                  </Text>
+               </View>
             </View>
-            <Text style={styles.brandTitle}>INK & PRINT STUDIO</Text>
-            <Text style={styles.brandSubtitle}>STUDIO</Text>
-            <Text style={styles.brandInfo}>{studioAddress}</Text>
-            <Text style={styles.brandInfo}>Ph: +91 98765 43210 | Email: hello@inkandprint.com</Text>
+            <View style={styles.headerRight}>
+              <Text style={styles.invoiceTitle}>INVOICE</Text>
+              <Text style={styles.invoiceNo}>Invoice No: {data.invoiceNumber || "DRAFT"}</Text>
+              <Text style={styles.invoiceMeta}>Date: {safeDate(data.date || new Date())}</Text>
+              <Text style={styles.invoiceMeta}>Category: {data.category || "General"}</Text>
+            </View>
           </View>
-          
-          <View style={styles.headerRight}>
-            <Text style={styles.invoiceTitle}>INVOICE</Text>
-            <Text style={styles.invoiceNo}>Invoice No: {data.invoiceNumber || "DRAFT"}</Text>
-            <Text style={styles.invoiceMeta}>Date: {safeDate(data.date || new Date())}</Text>
-            <Text style={styles.invoiceMeta}>Category: {data.category || "General"}</Text>
-          </View>
-        </View>
 
         <View style={styles.hr} />
 
@@ -369,7 +383,7 @@ export const InvoicePDF = ({ data }: { data: PDFData }) => {
             <Text style={styles.colDesc}>{data.description}</Text>
             <View style={styles.colQty}>
               <Text>{quantity}</Text>
-              <Text style={styles.toleranceText}>* 5% tolerance: eff. qty ~{toleranceQuantity}</Text>
+              <Text style={styles.toleranceText}>* 5% Wastage: eff. qty ~{toleranceQuantity}</Text>
             </View>
             <Text style={styles.colRate}>{fmtCurrency(unitRate)}</Text>
             <Text style={styles.colTotal}>{fmtCurrency(totalAmount)}</Text>
@@ -403,7 +417,7 @@ export const InvoicePDF = ({ data }: { data: PDFData }) => {
               <Text style={styles.paymentLabel}>Balance Due</Text>
               <View style={{ flexDirection: "row", alignItems: "center" }}>
                 <Text style={[styles.paymentValue, isBalanceUnpaid ? styles.unpaidBalance : {}]}>
-                  {isBalanceUnpaid ? fmtCurrency(balance) : (balance <= 0 ? "₹0.00" : "Paid")}
+                  {isBalanceUnpaid ? fmtCurrency(balance) : (balance <= 0 ? "Rs. 0.00" : "Paid")}
                 </Text>
                 {data.balancePaid && data.balanceMode && (
                   <Text style={[styles.badge, data.balanceMode.toUpperCase() === "ONLINE" ? styles.badgeOnline : styles.badgeCash]}>
@@ -422,11 +436,11 @@ export const InvoicePDF = ({ data }: { data: PDFData }) => {
           <View style={styles.paymentColRight}>
             <Text style={styles.sectionLabel}>ESTIMATED TIMELINES:</Text>
             <View style={styles.paymentRow}>
-              <Text style={styles.paymentLabel}>Design Completion</Text>
+              <Text style={styles.paymentLabel}>Estimated Working Days for Design</Text>
               <Text style={styles.paymentValue}>{data.estimatedDesignTime || "—"}</Text>
             </View>
             <View style={styles.paymentRow}>
-              <Text style={styles.paymentLabel}>Print Turnaround</Text>
+              <Text style={styles.paymentLabel}>Estimated Working Days for Printing after Final Design Confirmation</Text>
               <Text style={styles.paymentValue}>{data.estimatedPrintTime || "—"}</Text>
             </View>
             <Text style={[styles.toleranceText, { marginTop: 6 }]}>
@@ -435,25 +449,51 @@ export const InvoicePDF = ({ data }: { data: PDFData }) => {
           </View>
         </View>
 
+        {/* TERMS & CONDITIONS conditionally rendered */}
+        {(data.termWastage || data.termVariation || data.termProofread || data.termCancellation) && (
+          <View style={styles.termsArea}>
+            <Text style={[styles.sectionLabel, { marginBottom: 8 }]}>TERMS & CONDITIONS</Text>
+            {data.termWastage && (
+              <View style={styles.termItem}>
+                <Text style={styles.footerText}>•  5% Wastage will be incurred, and is mandatory.</Text>
+              </View>
+            )}
+            {data.termVariation && (
+              <View style={styles.termItem}>
+                <Text style={styles.footerText}>•  Colour variation is possible and is acceptable.</Text>
+              </View>
+            )}
+            {data.termProofread && (
+              <View style={styles.termItem}>
+                <Text style={styles.footerText}>•  Proofreading responsibility lies at your end.</Text>
+              </View>
+            )}
+            {data.termCancellation && (
+              <View style={styles.termItem}>
+                <Text style={styles.footerText}>•  An order placed cannot be cancelled/refunded/transfered/exchanged.</Text>
+              </View>
+            )}
+          </View>
+        )}
+
         {/* SIGNATURES */}
         <View style={styles.signatureArea}>
           <View style={styles.sigBox}>
-            <Text style={styles.sigTitle}>Authorised Signatory</Text>
+            <Text style={styles.sigTitle}>Customer Signature</Text>
             <View style={styles.sigLine} />
-            <Text style={styles.sigSub}>Ink & Print Studio</Text>
+            <Text style={styles.sigSub}></Text>
           </View>
-          
+
           <View style={styles.sigBox}>
-            <Text style={styles.sigTitle}>Customer Acknowledgement</Text>
+            <Text style={styles.sigTitle}>Authorized signature</Text>
             <View style={styles.sigLine} />
-            <Text style={styles.sigSub}>Signature / Date</Text>
+            <Text style={styles.sigSub}></Text>
           </View>
         </View>
 
         {/* FOOTER */}
         <View style={styles.footerRow}>
           <View>
-            <Text style={styles.footerText}>Terms & Conditions: Advance paid is non-refundable. Delivery subject to proof confirmation.</Text>
             <Text style={styles.footerQueries}>For queries: +91 98765 43210 | hello@inkandprint.com</Text>
           </View>
           <Text style={[styles.footerText, { fontWeight: "bold" }]}>
@@ -465,6 +505,7 @@ export const InvoicePDF = ({ data }: { data: PDFData }) => {
           `Page ${pageNumber} of ${totalPages}`
         )} fixed />
 
+        </View> {/* Close pageBorder */}
       </Page>
     </Document>
   );

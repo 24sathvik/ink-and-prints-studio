@@ -257,8 +257,8 @@ export function InvoiceTable({ currentUserRole }: { currentUserRole: string }) {
                     <td className="px-4 py-3">{inv.printingColor || "-"}</td>
                     <td className="px-4 py-3">{inv.designer || "-"}</td>
                     <td className="px-4 py-3">{inv.printer || "-"}</td>
-                    <td className="px-4 py-3">{inv.contentConfirmedOn ? format(new Date(inv.contentConfirmedOn), "dd MMM yyyy") : "-"}</td>
-                    <td className={`px-4 py-3 font-semibold ${style.text}`}>{inv.finalDeliveryDate ? format(new Date(inv.finalDeliveryDate), "dd MMM yyyy") : "-"}</td>
+                    <td className="px-4 py-3">{inv.contentConfirmedOn ? format(new Date(inv.contentConfirmedOn), "dd/MM/yyyy") : "-"}</td>
+                    <td className={`px-4 py-3 font-semibold ${style.text}`}>{inv.finalDeliveryDate ? format(new Date(inv.finalDeliveryDate), "dd/MM/yyyy") : "-"}</td>
                     <td className="px-4 py-3 font-medium text-brand-black">{inv.assignee?.name || "-"}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">

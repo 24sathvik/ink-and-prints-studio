@@ -21,8 +21,8 @@ export const invoiceCreateSchema = z.object({
   unitRate: positiveDecimal,
   advancePaid: z.boolean().default(false),
   advanceAmount: positiveDecimal.optional().nullable(),
-  advanceMode: z.enum(["ONLINE", "CASH"]).optional().nullable(),
-  balanceMode: z.enum(["ONLINE", "CASH"]).optional().nullable(),
+  advanceMode: z.enum(["ONLINE", "CASH"]).or(z.literal("")).optional().nullable(),
+  balanceMode: z.enum(["ONLINE", "CASH"]).or(z.literal("")).optional().nullable(),
   estimatedDesignTime: stringMax(100),
   estimatedPrintTime: stringMax(100),
   packing: z.enum(["WITH_PACKING", "WITHOUT_PACKING"]),
@@ -31,8 +31,20 @@ export const invoiceCreateSchema = z.object({
   printer: stringMax(100).optional().nullable(),
   additionalNotes: stringMax(1000).optional().nullable(),
   assigneeId: z.string().uuid().optional().nullable(),
-  contentConfirmedOn: z.coerce.date().optional().nullable(),
-  finalDeliveryDate: z.coerce.date().optional().nullable(),
+  contentConfirmedOn: z.preprocess((val) => {
+    if (!val || val === "") return null;
+    if (val instanceof Date && isNaN(val.getTime())) return null;
+    return val;
+  }, z.coerce.date().optional().nullable()),
+  finalDeliveryDate: z.preprocess((val) => {
+    if (!val || val === "") return null;
+    if (val instanceof Date && isNaN(val.getTime())) return null;
+    return val;
+  }, z.coerce.date().optional().nullable()),
+  termWastage: z.boolean().default(true),
+  termVariation: z.boolean().default(true),
+  termProofread: z.boolean().default(true),
+  termCancellation: z.boolean().default(true),
 });
 export const invoiceSchema = invoiceCreateSchema;
 

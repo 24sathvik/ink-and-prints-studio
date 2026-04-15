@@ -136,10 +136,16 @@ model Invoice {
   printingColor   String?
   designer        String?
   printer         String?
+  salesperson     String?
   additionalNotes String?
 
   contentConfirmedOn DateTime?
   finalDeliveryDate  DateTime?
+
+  termWastage      Boolean @default(true)
+  termVariation    Boolean @default(true)
+  termProofread    Boolean @default(true)
+  termCancellation Boolean @default(true)
 
   assigneeId String
   assignee   User   @relation("AssignedTo", fields: [assigneeId], references: [id])

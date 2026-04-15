@@ -12,11 +12,49 @@ import { Loader2, Save } from "lucide-react";
 import { invoiceSchema } from "@/lib/validations";
 import dynamic from "next/dynamic";
 import { CategoryCombobox } from "@/components/ui/category-combobox";
+import { CreatableCombobox } from "@/components/ui/creatable-combobox";
 
 const PDFDownloadButton = dynamic(
   () => import("./PDFDownloadButton"),
   { ssr: false }
 );
+
+// ── Predefined option lists ────────────────────────────────────────────────────
+const PRINTING_COLOR_OPTIONS = [
+  "Maroon",
+  "Mehendi Green",
+  "Chocolate Brown",
+  "Purple",
+  "Black",
+  "Blue",
+];
+
+const PRINTER_OPTIONS = [
+  "Sai Thirumala",
+  "Mallikarjuna",
+  "Anushree",
+  "Raju",
+  "Mythri",
+  "Om Sai",
+  "Express",
+  "Best",
+  "Smile",
+  "Matha",
+  "Thirumala",
+];
+
+const DESIGNER_OPTIONS = [
+  "Ramana Murthy",
+  "Sudhakar",
+  "Kranthi",
+  "Majeed",
+  "Arrow",
+  "Om Sai",
+  "Sai Thirumala",
+  "Teja",
+  "Ravali",
+];
+// ──────────────────────────────────────────────────────────────────────────────
 
 type FormValues = z.infer<typeof invoiceSchema>;
 
@@ -35,7 +73,7 @@ export function InvoiceForm({ initialData, invoiceId }: {
       if (!res.ok) throw new Error("Failed to fetch next number");
       return res.json();
     },
-    enabled: !invoiceId, // only fetch if new
+    enabled: !invoiceId,
   });
 
   const { data: users } = useQuery({
@@ -54,19 +92,21 @@ export function InvoiceForm({ initialData, invoiceId }: {
     control,
     setValue,
     getValues,
-    trigger,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(invoiceSchema) as any,
     defaultValues: (initialData as FormValues) || {
       date: new Date().toISOString().slice(0, 10),
-      // Typecasting the rest explicitly if needed, but FormValues as fallback is usually sufficient
       quantity: 0,
       unitRate: 0,
       advancePaid: false,
       packing: "WITHOUT_PACKING",
       contentConfirmedOn: new Date().toISOString().slice(0, 10),
       invoiceNumber: initialData?.invoiceNumber ? Number(initialData.invoiceNumber) : undefined,
+      termWastage: true,
+      termVariation: true,
+      termProofread: true,
+      termCancellation: true,
     } as any,
   });
 
@@ -85,22 +125,29 @@ export function InvoiceForm({ initialData, invoiceId }: {
   const rate = useWatch({ control, name: "unitRate" }) || 0;
   const advPaid = useWatch({ control, name: "advancePaid" });
   const advAmount = useWatch({ control, name: "advanceAmount" }) || 0;
-  
+
   const totalAmount = Number(qty) * Number(rate);
   const balance = advPaid ? totalAmount - Number(advAmount) : totalAmount;
   const toleranceQty = Math.floor(Number(qty) * 0.95);
+
+  // Watch combobox-controlled fields
+  const watchedColor = useWatch({ control, name: "printingColor" }) || "";
+  const watchedDesigner = useWatch({ control, name: "designer" }) || "";
+  const watchedPrinter = useWatch({ control, name: "printer" }) || "";
+  const watchedSalesperson = useWatch({ control, name: "salesperson" }) || "";
+  const watchedCategory = useWatch({ control, name: "category" }) || "";
 
   const mutation = useMutation({
     mutationFn: async (data: FormValues) => {
       const url = invoiceId ? `/api/invoices/${invoiceId}` : "/api/invoices";
       const method = invoiceId ? "PUT" : "POST";
-      
+
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
-      
+
       if (!res.ok) {
         const err = await res.text();
         throw new Error(err);
@@ -110,12 +157,10 @@ export function InvoiceForm({ initialData, invoiceId }: {
     onSuccess: (_data, variables) => {
       const isNew = !invoiceId;
       toast.success(invoiceId ? "Invoice updated successfully" : "Invoice generated successfully");
-      // Invalidate all caches that this mutation affects
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
       queryClient.invalidateQueries({ queryKey: ["wip"] });
       if (isNew && (variables as any)?.advancePaid) {
-        // New invoice with advance payment — ledger & summary need refreshing too
         queryClient.invalidateQueries({ queryKey: ["accounts-transactions"] });
         queryClient.invalidateQueries({ queryKey: ["accounts-summary"] });
       }
@@ -131,7 +176,9 @@ export function InvoiceForm({ initialData, invoiceId }: {
   }, []);
 
   const rawInvNumber = useWatch({ control, name: "invoiceNumber" });
-  const formattedInvoiceNumber = rawInvNumber ? `INV-${String(rawInvNumber).padStart(4, "0")}` : (invoiceId ? "Loading..." : (nextNumberData?.formattedNextNumber || "Loading..."));
+  const formattedInvoiceNumber = rawInvNumber
+    ? `INV-${String(rawInvNumber).padStart(4, "0")}`
+    : invoiceId ? "Loading..." : (nextNumberData?.formattedNextNumber || "Loading...");
 
   // PDF Preview Data Object
   const currentFormData = useWatch({ control });
@@ -147,8 +194,15 @@ export function InvoiceForm({ initialData, invoiceId }: {
     unitRate: Number(currentFormData.unitRate || 0),
   };
 
+  // Salesperson name options derived from users list
+  const salespersonOptions = (users || []).map((u: { name: string }) => u.name);
+
   return (
-    <form onSubmit={handleSubmit((d) => mutation.mutate(d as any))} className="space-y-8 pb-12 w-full max-w-5xl mx-auto">
+    <form onSubmit={handleSubmit((d) => mutation.mutate({
+      ...d,
+      advanceMode: d.advanceMode === "" ? null : d.advanceMode,
+      balanceMode: d.balanceMode === "" ? null : d.balanceMode,
+    } as any))} className="space-y-8 pb-12 w-full max-w-5xl mx-auto">
       <div className="flex justify-between items-center pb-4 border-b">
         <div>
           <div className="flex items-center gap-3">
@@ -228,10 +282,10 @@ export function InvoiceForm({ initialData, invoiceId }: {
 
           <div className="space-y-2">
             <label className="text-sm font-medium">Category *</label>
-            <CategoryCombobox 
-              value={useWatch({ control, name: "category" }) || ""} 
+            <CategoryCombobox
+              value={watchedCategory}
               onChange={(val) => {
-                 setValue("category", val, { shouldValidate: true, shouldDirty: true });
+                setValue("category", val, { shouldValidate: true, shouldDirty: true });
               }}
               error={!!errors.category}
             />
@@ -256,7 +310,7 @@ export function InvoiceForm({ initialData, invoiceId }: {
             <div className="space-y-2">
               <label className="text-sm font-medium">Quantity *</label>
               <input type="number" min="1" {...register("quantity", { valueAsNumber: true })} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:ring-2 focus:ring-brand-sage" />
-              <p className="text-xs text-muted-foreground">Effective quantity after 5% tolerance: <span className="font-bold">{toleranceQty}</span> cards</p>
+              <p className="text-xs text-muted-foreground">Effective quantity after 5% Wastage: <span className="font-bold">{toleranceQty}</span> cards</p>
               {errors.quantity && <p className="text-xs text-destructive">{errors.quantity.message}</p>}
             </div>
             <div className="space-y-2">
@@ -319,14 +373,14 @@ export function InvoiceForm({ initialData, invoiceId }: {
               </div>
             )}
           </div>
-          
-          <div className="grid grid-cols-2 gap-4">
+
+           <div className="grid grid-cols-2 gap-4">
              <div className="space-y-2">
-               <label className="text-sm font-medium">Est. Setup/Design Time</label>
+               <label className="text-sm font-medium">Estimated Working Days for Design</label>
                <input {...register("estimatedDesignTime")} placeholder="e.g. 2 Days" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:ring-2 focus:ring-brand-sage" />
              </div>
              <div className="space-y-2">
-               <label className="text-sm font-medium">Est. Print Time</label>
+               <label className="text-sm font-medium">Estimated Working Days for Printing after Final Design Confirmation</label>
                <input {...register("estimatedPrintTime")} placeholder="e.g. 3 Days after proof" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:ring-2 focus:ring-brand-sage" />
              </div>
           </div>
@@ -346,8 +400,9 @@ export function InvoiceForm({ initialData, invoiceId }: {
             <h3 className="text-lg font-semibold text-slate-800">Section 3: Internal Tracking</h3>
             <span className="text-xs font-bold bg-slate-200 text-slate-600 px-2 py-1 rounded">For Internal Use Only — Not Printed</span>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Column 1: Assignee + Salesperson + Printing Color */}
             <div className="space-y-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Assignee *</label>
@@ -361,26 +416,53 @@ export function InvoiceForm({ initialData, invoiceId }: {
               </div>
 
               <div className="space-y-2">
+                <label className="text-sm font-medium">Salesperson</label>
+                <CreatableCombobox
+                  value={watchedSalesperson}
+                  onChange={(val) => setValue("salesperson", val || null, { shouldDirty: true })}
+                  options={salespersonOptions}
+                  placeholder="Select salesperson..."
+                />
+              </div>
+
+              <div className="space-y-2">
                 <label className="text-sm font-medium">Printing Color</label>
-                <input {...register("printingColor")} className="flex h-10 w-full rounded-md border border-input bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-brand-sage" />
+                <CreatableCombobox
+                  value={watchedColor}
+                  onChange={(val) => setValue("printingColor", val || null, { shouldDirty: true })}
+                  options={PRINTING_COLOR_OPTIONS}
+                  placeholder="Select color..."
+                />
               </div>
             </div>
 
+            {/* Column 2: Designer + Printer */}
             <div className="space-y-4 border-l border-slate-200 pl-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Designer</label>
-                <input {...register("designer")} className="flex h-10 w-full rounded-md border border-input bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-brand-sage" />
+                <CreatableCombobox
+                  value={watchedDesigner}
+                  onChange={(val) => setValue("designer", val || null, { shouldDirty: true })}
+                  options={DESIGNER_OPTIONS}
+                  placeholder="Select designer..."
+                />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Printer Assigned</label>
-                <input {...register("printer")} className="flex h-10 w-full rounded-md border border-input bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-brand-sage" />
+                <CreatableCombobox
+                  value={watchedPrinter}
+                  onChange={(val) => setValue("printer", val || null, { shouldDirty: true })}
+                  options={PRINTER_OPTIONS}
+                  placeholder="Select printer..."
+                />
               </div>
             </div>
 
+            {/* Column 3: Dates */}
             <div className="space-y-4 border-l border-slate-200 pl-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium">Final Delivery Date *</label>
-                <input type="date" {...register("finalDeliveryDate", { valueAsDate: true })} className="flex h-10 w-full rounded-md border border-input bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-brand-sage" />
+                <label className="text-sm font-medium">Final Delivery Date</label>
+                <input type="date" {...register("finalDeliveryDate")} className="flex h-10 w-full rounded-md border border-input bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-brand-sage" />
                 {errors.finalDeliveryDate && <p className="text-xs text-destructive">{errors.finalDeliveryDate.message}</p>}
               </div>
 
@@ -394,6 +476,26 @@ export function InvoiceForm({ initialData, invoiceId }: {
           <div className="space-y-2 pt-4 border-t border-slate-200">
             <label className="text-sm font-medium">Additional Internal Notes</label>
             <textarea {...register("additionalNotes")} rows={3} placeholder="Private notes..." className="flex w-full rounded-md border border-input bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-brand-sage resize-none" />
+          </div>
+
+          <div className="space-y-3 pt-4 border-t border-slate-200">
+            <h4 className="font-semibold text-sm text-brand-forest">Terms &amp; Conditions (Printed on PDF)</h4>
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input type="checkbox" {...register("termWastage")} className="h-4 w-4 rounded border-gray-300 text-brand-forest focus:ring-brand-sage" />
+                5% Wastage will be incurred, and is mandatory.
+            </label>
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input type="checkbox" {...register("termVariation")} className="h-4 w-4 rounded border-gray-300 text-brand-forest focus:ring-brand-sage" />
+                Colour variation is possible and is acceptable.
+            </label>
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input type="checkbox" {...register("termProofread")} className="h-4 w-4 rounded border-gray-300 text-brand-forest focus:ring-brand-sage" />
+                Proofreading responsibility lies at your end.
+            </label>
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input type="checkbox" {...register("termCancellation")} className="h-4 w-4 rounded border-gray-300 text-brand-forest focus:ring-brand-sage" />
+                An order placed cannot be cancelled/refunded/transfered/exchanged.
+            </label>
           </div>
         </div>
       </div>
