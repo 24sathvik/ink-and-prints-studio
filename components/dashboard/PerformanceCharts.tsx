@@ -8,6 +8,7 @@ import {
 } from "recharts";
 import { TeamMemberStat } from "./LeaderboardCard";
 import { useSession } from "next-auth/react";
+import { CustomDateInput } from "@/components/ui/custom-date-input";
 
 export function PerformanceCharts({ teamData }: { teamData: TeamMemberStat[] }) {
   const { data: session } = useSession();
@@ -158,8 +159,7 @@ export function PerformanceCharts({ teamData }: { teamData: TeamMemberStat[] }) 
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex items-center gap-1.5">
               <label className="text-xs text-slate-500 font-medium whitespace-nowrap">From</label>
-              <input
-                type="date"
+              <CustomDateInput
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
                 className="text-xs h-7 rounded-md border border-slate-200 px-2 bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-slate-400"
@@ -167,8 +167,7 @@ export function PerformanceCharts({ teamData }: { teamData: TeamMemberStat[] }) 
             </div>
             <div className="flex items-center gap-1.5">
               <label className="text-xs text-slate-500 font-medium whitespace-nowrap">To</label>
-              <input
-                type="date"
+              <CustomDateInput
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
                 className="text-xs h-7 rounded-md border border-slate-200 px-2 bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-slate-400"

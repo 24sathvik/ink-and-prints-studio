@@ -6,6 +6,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Edit2, Trash2, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { CustomDateInput } from "@/components/ui/custom-date-input";
 
 function fmt(n: number) {
   return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 }).format(n);
@@ -81,7 +82,7 @@ function ExpenseModal({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-xs font-bold text-slate-500 mb-1 block">Paid On</label>
-              <input type="date" value={form.paidOn}
+              <CustomDateInput value={form.paidOn}
                 onChange={e => setForm(f => ({ ...f, paidOn: e.target.value }))}
                 className="w-full h-10 px-3 text-sm border border-slate-200 rounded-lg outline-none"
               />

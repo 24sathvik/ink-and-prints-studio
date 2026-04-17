@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { format } from "date-fns";
+import { CustomDateInput } from "@/components/ui/custom-date-input";
 
 function fmt(n: number) {
   return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 }).format(n);
@@ -86,10 +87,10 @@ export function TransactionLedger() {
             onChange={e => { setSearch(e.target.value); setPage(1); }}
             className="h-9 px-3 text-xs bg-brand-cream border border-brand-border rounded-lg outline-none flex-1 min-w-[180px]"
           />
-          <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
+          <CustomDateInput value={dateFrom} onChange={e => setDateFrom(e.target.value)}
             className="h-9 px-3 text-xs bg-brand-cream border border-brand-border rounded-lg outline-none" />
           <span className="text-brand-muted text-xs self-center">to</span>
-          <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
+          <CustomDateInput value={dateTo} onChange={e => setDateTo(e.target.value)}
             className="h-9 px-3 text-xs bg-brand-cream border border-brand-border rounded-lg outline-none" />
         </div>
 

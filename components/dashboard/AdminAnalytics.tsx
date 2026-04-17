@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { formatCurrency } from "@/lib/utils";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend } from "recharts";
+import { CustomDateInput } from "@/components/ui/custom-date-input";
 
 const COLORS = [
   "#32612d", "#4a7d44", "#689d61", "#2563eb", "#7c3aed",
@@ -97,8 +98,7 @@ export function AdminAnalytics() {
           <div className="flex flex-wrap gap-2 items-center">
             <div className="flex items-center gap-1.5">
               <label className="text-xs text-slate-500 font-medium">From</label>
-              <input
-                type="date"
+              <CustomDateInput
                 value={catStartDate}
                 onChange={(e) => setCatStartDate(e.target.value)}
                 className="text-xs h-7 rounded-md border border-slate-200 px-2 bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-slate-400"
@@ -106,8 +106,7 @@ export function AdminAnalytics() {
             </div>
             <div className="flex items-center gap-1.5">
               <label className="text-xs text-slate-500 font-medium">To</label>
-              <input
-                type="date"
+              <CustomDateInput
                 value={catEndDate}
                 onChange={(e) => setCatEndDate(e.target.value)}
                 className="text-xs h-7 rounded-md border border-slate-200 px-2 bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-slate-400"

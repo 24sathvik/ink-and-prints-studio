@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Search, ChevronDown, ChevronUp, X, Filter, Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { CustomDateInput } from "@/components/ui/custom-date-input";
 
 export function AdvancedFilterPanel({ users }: { users: any[] }) {
   const router = useRouter();
@@ -195,18 +196,18 @@ export function AdvancedFilterPanel({ users }: { users: any[] }) {
               <div className="space-y-2">
                 <label className="text-xs font-bold text-brand-forest uppercase tracking-wider">Delivery Date Range</label>
                 <div className="flex items-center gap-2">
-                  <input type="date" value={currentDeliveryFrom} onChange={e => updateParam("deliveryDateFrom", e.target.value)} className="w-full px-2 h-9 text-xs border border-brand-border rounded-md bg-white focus:ring-1 focus:ring-brand-sage outline-none" title="From" />
+                  <CustomDateInput value={currentDeliveryFrom} onChange={e => updateParam("deliveryDateFrom", e.target.value)} className="w-full px-2 h-9 text-xs border border-brand-border rounded-md bg-white focus:ring-1 focus:ring-brand-sage outline-none" title="From" />
                   <span className="text-slate-400">-</span>
-                  <input type="date" value={currentDeliveryTo} onChange={e => updateParam("deliveryDateTo", e.target.value)} className="w-full px-2 h-9 text-xs border border-brand-border rounded-md bg-white focus:ring-1 focus:ring-brand-sage outline-none" title="To" />
+                  <CustomDateInput value={currentDeliveryTo} onChange={e => updateParam("deliveryDateTo", e.target.value)} className="w-full px-2 h-9 text-xs border border-brand-border rounded-md bg-white focus:ring-1 focus:ring-brand-sage outline-none" title="To" />
                 </div>
               </div>
 
               <div className="space-y-2">
                 <label className="text-xs font-bold text-brand-forest uppercase tracking-wider">Created Date Range</label>
                 <div className="flex items-center gap-2">
-                  <input type="date" value={currentCreatedFrom} onChange={e => updateParam("createdFrom", e.target.value)} className="w-full px-2 h-9 text-xs border border-brand-border rounded-md bg-white focus:ring-1 focus:ring-brand-sage outline-none" title="From" />
+                  <CustomDateInput value={currentCreatedFrom} onChange={e => updateParam("createdFrom", e.target.value)} className="w-full px-2 h-9 text-xs border border-brand-border rounded-md bg-white focus:ring-1 focus:ring-brand-sage outline-none" title="From" />
                   <span className="text-slate-400">-</span>
-                  <input type="date" value={currentCreatedTo} onChange={e => updateParam("createdTo", e.target.value)} className="w-full px-2 h-9 text-xs border border-brand-border rounded-md bg-white focus:ring-1 focus:ring-brand-sage outline-none" title="To" />
+                  <CustomDateInput value={currentCreatedTo} onChange={e => updateParam("createdTo", e.target.value)} className="w-full px-2 h-9 text-xs border border-brand-border rounded-md bg-white focus:ring-1 focus:ring-brand-sage outline-none" title="To" />
                 </div>
               </div>
 

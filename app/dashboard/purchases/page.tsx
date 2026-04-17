@@ -12,6 +12,7 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import { PurchaseDrawer } from "@/components/purchases/PurchaseDrawer";
 import { PurchasesPageSkeleton } from "@/components/purchases/PurchasesPageSkeleton";
+import { CustomDateInput } from "@/components/ui/custom-date-input";
 
 // ---- helpers ----
 function fmt(n: any) {
@@ -199,10 +200,10 @@ export default function PurchasesPage() {
         </select>
 
         <div className="flex items-center gap-2">
-          <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
+          <CustomDateInput value={dateFrom} onChange={e => setDateFrom(e.target.value)}
             className="h-9 px-3 text-sm bg-brand-cream border border-brand-border rounded-lg outline-none" />
           <span className="text-brand-muted text-xs">to</span>
-          <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
+          <CustomDateInput value={dateTo} onChange={e => setDateTo(e.target.value)}
             className="h-9 px-3 text-sm bg-brand-cream border border-brand-border rounded-lg outline-none" />
         </div>
 

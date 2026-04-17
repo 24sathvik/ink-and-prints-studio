@@ -13,6 +13,7 @@ import { invoiceSchema } from "@/lib/validations";
 import dynamic from "next/dynamic";
 import { CategoryCombobox } from "@/components/ui/category-combobox";
 import { CreatableCombobox } from "@/components/ui/creatable-combobox";
+import { CustomDateInput } from "@/components/ui/custom-date-input";
 
 const PDFDownloadButton = dynamic(
   () => import("./PDFDownloadButton"),
@@ -101,7 +102,7 @@ export function InvoiceForm({ initialData, invoiceId }: {
       unitRate: 0,
       advancePaid: false,
       packing: "WITHOUT_PACKING",
-      contentConfirmedOn: new Date().toISOString().slice(0, 10),
+      contentConfirmedOn: undefined,
       invoiceNumber: initialData?.invoiceNumber ? Number(initialData.invoiceNumber) : undefined,
       termWastage: true,
       termVariation: true,
@@ -247,7 +248,7 @@ export function InvoiceForm({ initialData, invoiceId }: {
 
           <div className="space-y-2">
             <label className="text-sm font-medium">Date *</label>
-            <input type="date" {...register("date", { valueAsDate: true })} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:ring-2 focus:ring-brand-sage" />
+            <CustomDateInput {...register("date")} className="w-full" />
             {errors.date && <p className="text-xs text-destructive">{errors.date.message}</p>}
           </div>
 
@@ -462,13 +463,13 @@ export function InvoiceForm({ initialData, invoiceId }: {
             <div className="space-y-4 border-l border-slate-200 pl-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Final Delivery Date</label>
-                <input type="date" {...register("finalDeliveryDate")} className="flex h-10 w-full rounded-md border border-input bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-brand-sage" />
+                <CustomDateInput {...register("finalDeliveryDate")} className="w-full" />
                 {errors.finalDeliveryDate && <p className="text-xs text-destructive">{errors.finalDeliveryDate.message}</p>}
               </div>
 
               <div className="space-y-2">
                 <label className="text-sm font-medium">Content Confirmed On</label>
-                <input type="date" {...register("contentConfirmedOn", { valueAsDate: true })} className="flex h-10 w-full rounded-md border border-input bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-brand-sage" />
+                <CustomDateInput {...register("contentConfirmedOn")} className="w-full" />
               </div>
             </div>
           </div>
