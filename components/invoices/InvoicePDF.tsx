@@ -334,7 +334,7 @@ export const InvoicePDF = ({ data }: { data: PDFData }) => {
                     Kamala Nagar, ECIL &apos;X&apos; Road, Hyderabad 500062
                   </Text>
                   <Text style={{ fontSize: 10, color: "#1E432B", fontWeight: "bold", marginTop: 2 }}>
-                    Phone: 93471 33787, 81432 90307
+                    Phone: 81432 90307
                   </Text>
                </View>
             </View>
